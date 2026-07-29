@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react';
 
-const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL ?? 'http://localhost:8000';
-
 /**
  * Shows a warning when the project's latest succeeded build is newer than the
  * graph version this page was generated from (pipeline A staleness model).
+ * Worker URL is resolved at runtime from /api/config.
  */
 export function StaleBadge({
   project,
@@ -20,13 +19,20 @@ export function StaleBadge({
   useEffect(() => {
     if (!project || !graphVersion) return;
     let cancelled = false;
-    fetch(`${WORKER_URL}/projects/${project}/status`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
+
+    (async () => {
+      try {
+        const { workerUrl } = await fetch('/api/config').then((r) => r.json());
+        const data = await fetch(`${workerUrl}/projects/${project}/status`).then(
+          (r) => (r.ok ? r.json() : null),
+        );
         if (cancelled || !data?.version_ts) return;
         if (String(data.version_ts) > graphVersion) setLatest(data.version_ts);
-      })
-      .catch(() => {});
+      } catch {
+        /* worker unreachable — no badge */
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
