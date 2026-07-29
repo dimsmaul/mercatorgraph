@@ -11,7 +11,7 @@ from typing import Protocol
 
 from psycopg_pool import ConnectionPool
 
-from ckmcp import auth
+from ckmcp import annotations, auth
 from ckmcp.graphstore import GraphStore
 
 # hard caps — enforced regardless of caller input
@@ -106,6 +106,11 @@ class Tools:
             return {"nodes": [], "edges": [], "summary": "No matching nodes."}
 
         sub = store.neighborhood(seeds, max_nodes=cap)
+        counts = annotations.annotation_counts(
+            self._pool, project, [n["id"] for n in sub["nodes"]]
+        )
+        for node in sub["nodes"]:
+            node["annotation_count"] = counts.get(node["id"], 0)
         bc = store.betweenness()
         top = sorted(sub["nodes"], key=lambda n: bc.get(n["id"], 0.0), reverse=True)[
             :SUMMARY_TOP
@@ -120,8 +125,24 @@ class Tools:
         self._require_scope(token, project)
         store = self._store(project)
         detail = store.node_detail(node_id)
+        detail["annotations"] = annotations.annotations_for_nodes(
+            self._pool, project, [node_id]
+        ).get(node_id, [])
         auth.audit(self._pool, token.principal, "get_node", project, node_id)
         return detail
+
+    def add_annotation(
+        self, token: auth.TokenInfo, project: str, node_id: str, content: str
+    ) -> dict:
+        self._require_scope(token, project)
+        store = self._store(project)
+        if not store.has_node(node_id):
+            raise KeyError(f"node {node_id!r} not in project {project!r}")
+        annotation_id = annotations.add_annotation(
+            self._pool, project, node_id, content, token.principal
+        )
+        auth.audit(self._pool, token.principal, "add_annotation", project, node_id)
+        return {"id": annotation_id}
 
     def trace_path(
         self,

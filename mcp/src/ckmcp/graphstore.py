@@ -115,6 +115,9 @@ class GraphStore:
 
     # --- queries ----------------------------------------------------------
 
+    def has_node(self, node_id: str) -> bool:
+        return node_id in self._g
+
     def node_detail(self, node_id: str) -> dict:
         if node_id not in self._g:
             raise KeyError(node_id)

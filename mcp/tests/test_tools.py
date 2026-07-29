@@ -130,3 +130,71 @@ def test_audit_written(tools, pool):
     with pool.connection() as conn:
         n = conn.execute("SELECT count(*) FROM audit_log WHERE tool='get_node'").fetchone()
     assert n[0] >= 1
+
+
+# --- SP1 Task 3: add_annotation tool --------------------------------------
+
+
+def test_add_annotation_writes_and_scopes(tools, pool):
+    res = tools.add_annotation(TOK_A, "a", "svc_db_conn", "explain this")
+    assert isinstance(res["id"], int)
+    with pool.connection() as conn:
+        row = conn.execute(
+            "SELECT project_slug, node_id, content, principal FROM annotations "
+            "WHERE id=%s",
+            (res["id"],),
+        ).fetchone()
+    assert row == ("a", "svc_db_conn", "explain this", "agent-a")
+
+
+def test_add_annotation_denied_out_of_scope(tools):
+    with pytest.raises(ScopeError):
+        tools.add_annotation(TOK_A, "b", "svc_db_conn", "nope")
+
+
+def test_add_annotation_unknown_node_raises(tools):
+    with pytest.raises(KeyError):
+        tools.add_annotation(TOK_A, "a", "ghost", "nope")
+
+
+def test_add_annotation_audited(tools, pool):
+    tools.add_annotation(TOK_A, "a", "svc_db_conn", "note")
+    with pool.connection() as conn:
+        n = conn.execute(
+            "SELECT count(*) FROM audit_log WHERE tool='add_annotation'"
+        ).fetchone()[0]
+    assert n >= 1
+
+
+# --- SP1 Task 4: overlay + persistence across rebuild ---------------------
+
+
+def test_get_node_overlays_annotations(tools):
+    tools.add_annotation(TOK_A, "a", "svc_db_conn", "singleton on purpose")
+    detail = tools.get_node(TOK_A, "a", "svc_db_conn")
+    assert "annotations" in detail
+    assert detail["annotations"][0]["content"] == "singleton on purpose"
+    assert detail["annotations"][0]["tag"] == "CONTRIBUTED"
+
+
+def test_get_node_without_annotations_is_empty_list(tools):
+    detail = tools.get_node(TOK_A, "a", "svc_api_handle")
+    assert detail["annotations"] == []
+
+
+def test_query_graph_includes_annotation_count(tools):
+    tools.add_annotation(TOK_A, "a", "svc_db_conn", "note")
+    res = tools.query_graph(TOK_A, "a", "conn")
+    conn_node = next(n for n in res["nodes"] if n["id"] == "svc_db_conn")
+    assert conn_node["annotation_count"] >= 1
+
+
+def test_annotation_survives_graph_rebuild(tools, pool):
+    tools.add_annotation(TOK_A, "a", "svc_db_conn", "still here after rebuild")
+    # simulate a rebuild: fresh Tools + freshly loaded store for the same project
+    rebuilt_store = GraphStore.from_dir(FIXTURE)
+    rebuilt = Tools(DictRegistry({"a": rebuilt_store, "b": rebuilt_store}), pool)
+    detail = rebuilt.get_node(TOK_A, "a", "svc_db_conn")
+    assert any(
+        x["content"] == "still here after rebuild" for x in detail["annotations"]
+    )

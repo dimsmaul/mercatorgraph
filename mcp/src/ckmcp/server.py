@@ -68,9 +68,17 @@ def build_server(pool: ConnectionPool, data_dir: str) -> FastMCP:
 
     @mcp.tool
     async def get_node(project: str, node_id: str) -> dict:
-        """Node detail plus its direct edges."""
+        """Node detail plus its direct edges and any contributed annotations."""
         tok = current_token()
         return await anyio.to_thread.run_sync(tools.get_node, tok, project, node_id)
+
+    @mcp.tool
+    async def add_annotation(project: str, node_id: str, content: str) -> dict:
+        """Attach a persistent note to a node (contributed knowledge)."""
+        tok = current_token()
+        return await anyio.to_thread.run_sync(
+            tools.add_annotation, tok, project, node_id, content
+        )
 
     @mcp.tool
     async def trace_path(
