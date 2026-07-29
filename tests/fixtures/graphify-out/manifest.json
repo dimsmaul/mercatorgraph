@@ -1,0 +1,22 @@
+{
+  "main.py": {
+    "mtime": 1785224377.0614345,
+    "ast_hash": "4e1d90bc9abf12b6f6834d5de3d5c185",
+    "semantic_hash": ""
+  },
+  "svc/api.py": {
+    "mtime": 1785224377.0611298,
+    "ast_hash": "f81d3e91666f2045782ff0ae2e725694",
+    "semantic_hash": ""
+  },
+  "svc/auth.py": {
+    "mtime": 1785224377.0613363,
+    "ast_hash": "b5730df64ade49ba25ddd833ec241f8f",
+    "semantic_hash": ""
+  },
+  "svc/db.py": {
+    "mtime": 1785224377.0612473,
+    "ast_hash": "1e1742a906905314e9807f23008e0bd8",
+    "semantic_hash": ""
+  }
+}
