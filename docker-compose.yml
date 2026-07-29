@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-knowledge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-knowledge}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-knowledge}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-knowledge}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-knowledge}
+      DATA_DIR: /data
+      PROJECTS_CONFIG: /app/projects.yaml
+    env_file:
+      - .env
+    volumes:
+      - graphdata:/data
+      - ./projects.yaml:/app/projects.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  mcp:
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-knowledge}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-knowledge}
+      DATA_DIR: /data
+      MCP_PORT: "8080"
+    volumes:
+      - graphdata:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+  docs:
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_WORKER_URL: ${NEXT_PUBLIC_WORKER_URL:-http://localhost:8000}
+    depends_on:
+      worker:
+        condition: service_started
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  graphdata:
