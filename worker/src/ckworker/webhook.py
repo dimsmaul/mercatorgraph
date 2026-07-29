@@ -12,6 +12,7 @@ import os
 from typing import Callable
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from psycopg_pool import ConnectionPool
 
@@ -75,6 +76,14 @@ def create_app(
 ) -> FastAPI:
     builder = builder or make_default_builder(data_dir)
     app = FastAPI(title="centralize-knowledge worker")
+
+    # docs app (different origin) calls /status + /graph.html from the browser
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=os.environ.get("WORKER_CORS_ORIGINS", "*").split(","),
+        allow_methods=["GET", "POST"],
+        allow_headers=["*"],
+    )
 
     def _config(slug: str) -> ProjectConfig:
         cfg = projects.get(slug)

@@ -76,6 +76,12 @@ def test_health(client):
     assert tc.get("/health").json() == {"status": "ok"}
 
 
+def test_cors_header_present(client):
+    tc, _, _ = client
+    r = tc.get("/health", headers={"Origin": "http://localhost:3000"})
+    assert r.headers.get("access-control-allow-origin") in {"*", "http://localhost:3000"}
+
+
 def test_webhook_bad_signature_rejected(client):
     tc, _, _ = client
     r = tc.post("/webhook/demo", content=b"{}", headers={"X-Hub-Signature-256": "sha256=bad"})
