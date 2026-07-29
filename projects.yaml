@@ -1,0 +1,7 @@
+# Registered projects. Secrets referenced by env var name, never inlined.
+projects:
+  - slug: demo
+    repo_url: https://github.com/octocat/Hello-World.git
+    branch: master
+    build_flags: []            # extra flags passed to `graphify update`
+    webhook_secret_ref: WEBHOOK_SECRET_DEMO

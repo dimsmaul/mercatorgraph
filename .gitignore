@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Env / secrets
+.env
+*.pem
+*.key
+
+# Platform data
+data/
+
+# Graphify — never commit cost/usage
+cost.json
+**/graphify-out/cost.json
+
+# Node / Fumadocs docs app
+docs/node_modules/
+docs/.next/
+docs/.source/
+# generated MDX content (derived from graph via ckdocs)
+docs/content/docs/
