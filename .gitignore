@@ -22,5 +22,6 @@ cost.json
 docs/node_modules/
 docs/.next/
 docs/.source/
-# generated MDX content (derived from graph via ckdocs)
-docs/content/docs/
+# generated MDX content (derived from graph via ckdocs); keep the committed landing index
+docs/content/docs/*/
+docs/content/docs/versions.json

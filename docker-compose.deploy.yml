@@ -1,3 +1,5 @@
+# Pull-only stack for deploying published images (no build).
+#   IMAGE_PREFIX=ghcr.io/<you> TAG=0.1.0 docker compose -f docker-compose.deploy.yml up -d
 services:
   postgres:
     image: postgres:17-alpine
@@ -14,10 +16,7 @@ services:
       retries: 20
 
   worker:
-    image: ${IMAGE_PREFIX:-ck}/worker:${TAG:-dev}
-    build:
-      context: .
-      dockerfile: worker/Dockerfile
+    image: ${IMAGE_PREFIX:?set IMAGE_PREFIX}/worker:${TAG:-latest}
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-knowledge}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-knowledge}
       DATA_DIR: /data
@@ -35,10 +34,7 @@ services:
       - "8000:8000"
 
   mcp:
-    image: ${IMAGE_PREFIX:-ck}/mcp:${TAG:-dev}
-    build:
-      context: .
-      dockerfile: mcp/Dockerfile
+    image: ${IMAGE_PREFIX:?set IMAGE_PREFIX}/mcp:${TAG:-latest}
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-knowledge}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-knowledge}
       DATA_DIR: /data
@@ -54,12 +50,8 @@ services:
       - "8080:8080"
 
   docs:
-    image: ${IMAGE_PREFIX:-ck}/docs:${TAG:-dev}
-    build:
-      context: ./docs
-      dockerfile: Dockerfile
+    image: ${IMAGE_PREFIX:?set IMAGE_PREFIX}/docs:${TAG:-latest}
     environment:
-      # browser-reachable worker URL, served to the client via /api/config
       WORKER_URL: ${PUBLIC_WORKER_URL:-http://localhost:8000}
     depends_on:
       worker:
