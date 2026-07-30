@@ -30,6 +30,7 @@ class ProjectConfig:
     build_flags: list[str] = field(default_factory=list)
     webhook_secret_ref: str | None = None
     rebuild_interval: int | None = None
+    deploy_key_ref: str | None = None  # path to an encrypted SSH deploy key
 
     def webhook_secret(self) -> str | None:
         return resolve_secret(self.webhook_secret_ref)
@@ -43,6 +44,7 @@ def _project_from_dict(raw: dict) -> ProjectConfig:
         build_flags=list(raw.get("build_flags") or []),
         webhook_secret_ref=raw.get("webhook_secret_ref"),
         rebuild_interval=raw.get("rebuild_interval"),
+        deploy_key_ref=raw.get("deploy_key_ref"),
     )
 
 

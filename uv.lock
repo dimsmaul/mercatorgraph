@@ -249,12 +249,14 @@ name = "ckcommon"
 version = "0.1.0"
 source = { editable = "common" }
 dependencies = [
+    { name = "cryptography" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pyyaml" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "cryptography", specifier = ">=43" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2" },
     { name = "pyyaml", specifier = ">=6" },
 ]

@@ -7,6 +7,8 @@ never replaces the live graph.
 
 from __future__ import annotations
 
+import contextlib
+import os
 import subprocess
 import threading
 from dataclasses import dataclass
@@ -17,8 +19,30 @@ from typing import Callable
 
 from ckcommon.config import ProjectConfig
 
+from ckworker.deploykey import ssh_env, write_temp_key
 from ckworker.graphify_adapter import build_graph, load_counts
 from ckworker.promote import current_out_dir, promote, stage_version
+
+
+@contextlib.contextmanager
+def _deploy_key_env(config: ProjectConfig):
+    """Set GIT_SSH_COMMAND from an encrypted deploy key for the clone, then restore."""
+    if not config.deploy_key_ref:
+        yield
+        return
+    key_path = write_temp_key(config.deploy_key_ref)
+    env = ssh_env(key_path)
+    saved = {k: os.environ.get(k) for k in env}
+    os.environ.update(env)
+    try:
+        yield
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        key_path.unlink(missing_ok=True)
 
 CloneFn = Callable[[str, str, Path], None]
 
@@ -70,7 +94,8 @@ def build_project(
     with lock:
         with TemporaryDirectory() as tmp:
             workdir = Path(tmp) / "repo"
-            clone_fn(config.repo_url, config.branch, workdir)
+            with _deploy_key_env(config):
+                clone_fn(config.repo_url, config.branch, workdir)
 
             result = build_graph(workdir, config.build_flags, fixture=fixture)
 
