@@ -5,3 +5,4 @@ projects:
     branch: master
     build_flags: []            # extra flags passed to `graphify update`
     webhook_secret_ref: WEBHOOK_SECRET_DEMO
+    # rebuild_interval: 3600   # optional: seconds between automatic (cron) rebuilds

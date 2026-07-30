@@ -18,6 +18,8 @@ from psycopg_pool import ConnectionPool
 
 from ckcommon.config import ProjectConfig
 from ckworker.build import BuildOutcome, build_project
+from ckworker.cron import CronScheduler
+from ckworker.debounce import BuildDebouncer
 from ckworker.promote import current_out_dir
 
 Builder = Callable[[str, ProjectConfig, bool], BuildOutcome]
@@ -73,9 +75,20 @@ def create_app(
     data_dir: str,
     projects: dict[str, ProjectConfig],
     builder: Builder | None = None,
+    debounce_seconds: float = 0.0,
+    start_cron: bool = False,
 ) -> FastAPI:
     builder = builder or make_default_builder(data_dir)
     app = FastAPI(title="centralize-knowledge worker")
+
+    # coalesce bursts of webhook pushes per project (PRD open-Q1). Off at <= 0.
+    debouncer: BuildDebouncer | None = None
+    if debounce_seconds > 0:
+        debouncer = BuildDebouncer(
+            debounce_seconds,
+            lambda slug: run_build_and_record(pool, slug, builder, projects[slug], False),
+        )
+        app.state.debouncer = debouncer
 
     # docs app (different origin) calls /status + /graph.html from the browser
     app.add_middleware(
@@ -84,6 +97,23 @@ def create_app(
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
+
+    # interval-based rebuilds (PRD 'cron' trigger)
+    if start_cron:
+        cron = CronScheduler(
+            lambda slug: run_build_and_record(pool, slug, builder, projects[slug], False)
+        )
+        app.state.cron = cron
+
+        @app.on_event("startup")
+        def _start_cron() -> None:
+            for slug, cfg in projects.items():
+                if cfg.rebuild_interval:
+                    cron.schedule(slug, cfg.rebuild_interval)
+
+        @app.on_event("shutdown")
+        def _stop_cron() -> None:
+            cron.stop()
 
     def _config(slug: str) -> ProjectConfig:
         cfg = projects.get(slug)
@@ -102,7 +132,10 @@ def create_app(
         sig = request.headers.get("X-Hub-Signature-256")
         if not verify_signature(cfg.webhook_secret(), body, sig):
             raise HTTPException(status_code=401, detail="bad signature")
-        background.add_task(run_build_and_record, pool, slug, builder, cfg, False)
+        if debouncer is not None:
+            debouncer.trigger(slug)  # coalesce bursts
+        else:
+            background.add_task(run_build_and_record, pool, slug, builder, cfg, False)
         return JSONResponse({"status": "accepted", "project": slug}, status_code=202)
 
     @app.post("/projects/{slug}/rebuild")
@@ -156,7 +189,10 @@ def main() -> None:
     # worker owns DB writes -> it applies migrations on startup (idempotent)
     apply_migrations(pool, os.environ.get("MIGRATIONS_DIR", "db/migrations"))
     data_dir = os.environ.get("DATA_DIR", "/data")
-    app = create_app(pool, data_dir, all_projects())
+    debounce = float(os.environ.get("DEBOUNCE_SECONDS", "0"))
+    app = create_app(
+        pool, data_dir, all_projects(), debounce_seconds=debounce, start_cron=True
+    )
     uvicorn.run(app, host=os.environ.get("WORKER_HOST", "0.0.0.0"),
                 port=int(os.environ.get("WORKER_PORT", "8000")))
 

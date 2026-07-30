@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -130,10 +131,83 @@ def test_unknown_project_404(client):
     assert tc.get("/projects/nope/status").status_code == 404
 
 
+def test_cron_triggers_rebuild(pool, tmp_path, monkeypatch):
+    data_dir = str(tmp_path / "data")
+    cfg = ProjectConfig(
+        slug="demo", repo_url="https://x/demo.git", branch="main", rebuild_interval=0.15
+    )
+
+    def builder(slug, config, force):
+        return build_project(
+            slug, config, data_dir, clone_fn=noop_clone, fixture=FIXTURE, force=force
+        )
+
+    app = create_app(pool, data_dir, {"demo": cfg}, builder=builder, start_cron=True)
+    with TestClient(app):  # startup schedules cron; shutdown stops it
+        deadline = time.time() + 5
+        n = 0
+        while time.time() < deadline:
+            with pool.connection() as conn:
+                n = conn.execute(
+                    "SELECT count(*) FROM builds WHERE project_slug='demo' "
+                    "AND status='succeeded'"
+                ).fetchone()[0]
+            if n >= 1:
+                break
+            time.sleep(0.05)
+    assert n >= 1
+
+
 def test_graph_html_404_when_absent(client):
     tc, _, _ = client
     tc.post("/projects/demo/rebuild")  # fixture has no graph.html
     assert tc.get("/projects/demo/graph.html").status_code == 404
+
+
+def test_webhook_debounce_coalesces_bursts(pool, tmp_path, monkeypatch):
+    monkeypatch.setenv("WEBHOOK_SECRET_DEMO", SECRET)
+    data_dir = str(tmp_path / "data")
+    cfg = ProjectConfig(
+        slug="demo",
+        repo_url="https://x/demo.git",
+        branch="main",
+        webhook_secret_ref="WEBHOOK_SECRET_DEMO",
+    )
+
+    def builder(slug, config, force):
+        return build_project(
+            slug, config, data_dir, clone_fn=noop_clone, fixture=FIXTURE, force=force
+        )
+
+    app = create_app(pool, data_dir, {"demo": cfg}, builder=builder, debounce_seconds=0.4)
+    tc = TestClient(app)
+    body = b'{"ref":"refs/heads/main"}'
+    sig = _sign(body)
+
+    for _ in range(3):  # burst within the window
+        tc.post("/webhook/demo", content=body, headers={"X-Hub-Signature-256": sig})
+        time.sleep(0.05)
+
+    # wait deterministically for the single coalesced build to finish (no leaked thread)
+    def _succeeded() -> int:
+        with pool.connection() as conn:
+            return conn.execute(
+                "SELECT count(*) FROM builds WHERE project_slug='demo' "
+                "AND status='succeeded'"
+            ).fetchone()[0]
+
+    deadline = time.time() + 5
+    n = 0
+    while time.time() < deadline:
+        n = _succeeded()
+        if n >= 1:
+            break
+        time.sleep(0.05)
+    app.state.debouncer.flush()
+
+    assert n == 1  # three pushes coalesced into one build
+    time.sleep(0.2)
+    assert _succeeded() == 1  # no second build fires after coalescing
 
 
 def test_graph_html_served_when_present(client):
