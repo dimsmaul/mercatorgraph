@@ -131,6 +131,28 @@ def test_unknown_project_404(client):
     assert tc.get("/projects/nope/status").status_code == 404
 
 
+def test_build_sends_notification(pool, tmp_path):
+    from ckworker.notify import Notifier
+    from ckworker.webhook import run_build_and_record
+
+    data_dir = str(tmp_path / "data")
+    cfg = ProjectConfig(slug="demo", repo_url="https://x/demo.git", branch="main")
+
+    def builder(slug, config, force):
+        return build_project(
+            slug, config, data_dir, clone_fn=noop_clone, fixture=FIXTURE, force=force
+        )
+
+    sent = []
+    notifier = Notifier("http://hook", poster=lambda url, payload: sent.append(payload))
+    run_build_and_record(pool, "demo", builder, cfg, False, notifier)
+
+    assert sent, "expected a notification"
+    assert sent[0]["event"] == "build.succeeded"
+    assert sent[0]["project"] == "demo"
+    assert sent[0]["node_count"] == 9
+
+
 def test_cron_triggers_rebuild(pool, tmp_path, monkeypatch):
     data_dir = str(tmp_path / "data")
     cfg = ProjectConfig(

@@ -19,6 +19,7 @@ from psycopg_pool import ConnectionPool
 from ckcommon.config import ProjectConfig
 from ckworker.build import BuildOutcome, build_project
 from ckworker.cron import CronScheduler
+from ckworker.notify import Notifier
 from ckworker.debounce import BuildDebouncer
 from ckworker.promote import current_out_dir
 
@@ -41,7 +42,12 @@ def make_default_builder(data_dir: str) -> Builder:
 
 
 def run_build_and_record(
-    pool: ConnectionPool, slug: str, builder: Builder, config: ProjectConfig, force: bool
+    pool: ConnectionPool,
+    slug: str,
+    builder: Builder,
+    config: ProjectConfig,
+    force: bool,
+    notifier: "Notifier | None" = None,
 ) -> None:
     with pool.connection() as conn:
         build_id = conn.execute(
@@ -68,6 +74,16 @@ def run_build_and_record(
             (outcome.version_ts, outcome.node_count, outcome.edge_count, build_id),
         )
         conn.commit()
+    if notifier is not None:
+        notifier.notify(
+            {
+                "event": "build.succeeded",
+                "project": slug,
+                "version_ts": outcome.version_ts,
+                "node_count": outcome.node_count,
+                "edge_count": outcome.edge_count,
+            }
+        )
 
 
 def create_app(
@@ -77,8 +93,10 @@ def create_app(
     builder: Builder | None = None,
     debounce_seconds: float = 0.0,
     start_cron: bool = False,
+    notify_url: str | None = None,
 ) -> FastAPI:
     builder = builder or make_default_builder(data_dir)
+    notifier = Notifier(notify_url)
     app = FastAPI(title="centralize-knowledge worker")
 
     # coalesce bursts of webhook pushes per project (PRD open-Q1). Off at <= 0.
@@ -86,7 +104,9 @@ def create_app(
     if debounce_seconds > 0:
         debouncer = BuildDebouncer(
             debounce_seconds,
-            lambda slug: run_build_and_record(pool, slug, builder, projects[slug], False),
+            lambda slug: run_build_and_record(
+                pool, slug, builder, projects[slug], False, notifier
+            ),
         )
         app.state.debouncer = debouncer
 
@@ -101,7 +121,9 @@ def create_app(
     # interval-based rebuilds (PRD 'cron' trigger)
     if start_cron:
         cron = CronScheduler(
-            lambda slug: run_build_and_record(pool, slug, builder, projects[slug], False)
+            lambda slug: run_build_and_record(
+                pool, slug, builder, projects[slug], False, notifier
+            )
         )
         app.state.cron = cron
 
@@ -135,13 +157,17 @@ def create_app(
         if debouncer is not None:
             debouncer.trigger(slug)  # coalesce bursts
         else:
-            background.add_task(run_build_and_record, pool, slug, builder, cfg, False)
+            background.add_task(
+                run_build_and_record, pool, slug, builder, cfg, False, notifier
+            )
         return JSONResponse({"status": "accepted", "project": slug}, status_code=202)
 
     @app.post("/projects/{slug}/rebuild")
     def rebuild(slug: str, background: BackgroundTasks, force: bool = False):
         cfg = _config(slug)
-        background.add_task(run_build_and_record, pool, slug, builder, cfg, force)
+        background.add_task(
+            run_build_and_record, pool, slug, builder, cfg, force, notifier
+        )
         return JSONResponse({"status": "accepted", "project": slug}, status_code=202)
 
     @app.get("/projects/{slug}/graph.html")
@@ -191,7 +217,12 @@ def main() -> None:
     data_dir = os.environ.get("DATA_DIR", "/data")
     debounce = float(os.environ.get("DEBOUNCE_SECONDS", "0"))
     app = create_app(
-        pool, data_dir, all_projects(), debounce_seconds=debounce, start_cron=True
+        pool,
+        data_dir,
+        all_projects(),
+        debounce_seconds=debounce,
+        start_cron=True,
+        notify_url=os.environ.get("NOTIFY_URL"),
     )
     uvicorn.run(app, host=os.environ.get("WORKER_HOST", "0.0.0.0"),
                 port=int(os.environ.get("WORKER_PORT", "8000")))
