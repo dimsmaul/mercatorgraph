@@ -31,6 +31,7 @@ def lookup_token(pool: ConnectionPool, raw_token: str) -> TokenInfo | None:
     with pool.connection() as conn:
         row = conn.execute(
             "UPDATE tokens SET last_used_at = now() WHERE token_hash = %s "
+            "AND revoked = false AND (expires_at IS NULL OR expires_at > now()) "
             "RETURNING principal, scopes",
             (token_hash,),
         ).fetchone()
