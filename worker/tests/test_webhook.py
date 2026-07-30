@@ -131,6 +131,42 @@ def test_unknown_project_404(client):
     assert tc.get("/projects/nope/status").status_code == 404
 
 
+def test_comment_lifecycle(client):
+    tc, _, _ = client
+    # create
+    r = tc.post(
+        "/projects/demo/comments",
+        json={"node_id": "svc_db_conn", "content": "why singleton?", "author": "dev"},
+    )
+    assert r.status_code == 200
+    cid = r.json()["id"]
+    # list (filtered by node)
+    got = tc.get("/projects/demo/comments", params={"node_id": "svc_db_conn"}).json()
+    assert any(c["id"] == cid and c["status"] == "open" for c in got["comments"])
+    # transition status
+    assert tc.patch(f"/projects/demo/comments/{cid}", json={"status": "resolved"}).status_code == 200
+    got2 = tc.get("/projects/demo/comments").json()
+    assert next(c for c in got2["comments"] if c["id"] == cid)["status"] == "resolved"
+
+
+def test_comment_invalid_status_422(client):
+    tc, _, _ = client
+    cid = tc.post(
+        "/projects/demo/comments", json={"node_id": "n", "content": "x"}
+    ).json()["id"]
+    assert tc.patch(f"/projects/demo/comments/{cid}", json={"status": "bogus"}).status_code == 422
+
+
+def test_comment_missing_fields_422(client):
+    tc, _, _ = client
+    assert tc.post("/projects/demo/comments", json={"node_id": "n"}).status_code == 422
+
+
+def test_patch_unknown_comment_404(client):
+    tc, _, _ = client
+    assert tc.patch("/projects/demo/comments/999999", json={"status": "open"}).status_code == 404
+
+
 def test_stats_builds(client):
     tc, _, pool = client
     tc.post("/projects/demo/rebuild")  # produces a succeeded build

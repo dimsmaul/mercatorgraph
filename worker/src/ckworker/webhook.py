@@ -11,13 +11,14 @@ import hmac
 import os
 from typing import Callable
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from psycopg_pool import ConnectionPool
 
 from ckcommon.config import ProjectConfig
 from ckworker.build import BuildOutcome, build_project
+from ckworker import comments
 from ckworker.cron import CronScheduler
 from ckworker.notify import Notifier
 from ckworker.debounce import BuildDebouncer
@@ -222,6 +223,34 @@ def create_app(
             "started_at": row[5].isoformat() if row[5] else None,
             "finished_at": row[6].isoformat() if row[6] else None,
         }
+
+    @app.post("/projects/{slug}/comments")
+    def create_comment(slug: str, payload: dict = Body(...)):
+        """Add an inline comment anchored to a node."""
+        _config(slug)
+        if not payload.get("node_id") or not payload.get("content"):
+            raise HTTPException(status_code=422, detail="node_id and content required")
+        cid = comments.add_comment(
+            pool, slug, payload["node_id"], payload["content"],
+            payload.get("author", "anonymous"),
+        )
+        return {"id": cid}
+
+    @app.get("/projects/{slug}/comments")
+    def get_comments(slug: str, node_id: str | None = None) -> dict:
+        _config(slug)
+        return {"comments": comments.list_comments(pool, slug, node_id)}
+
+    @app.patch("/projects/{slug}/comments/{comment_id}")
+    def patch_comment(slug: str, comment_id: int, payload: dict = Body(...)) -> dict:
+        _config(slug)
+        try:
+            ok = comments.set_status(pool, comment_id, payload.get("status", ""))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="invalid status")
+        if not ok:
+            raise HTTPException(status_code=404, detail="comment not found")
+        return {"ok": True}
 
     @app.get("/stats/builds")
     def stats_builds() -> dict:
