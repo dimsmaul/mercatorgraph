@@ -104,6 +104,16 @@ def build_server(pool: ConnectionPool, data_dir: str) -> FastMCP:
         tok = current_token()
         return await anyio.to_thread.run_sync(tools.search, tok, query, project, limit)
 
+    @mcp.tool
+    async def graph_diff(
+        project: str, from_version: str | None = None, to_version: str | None = None
+    ) -> dict:
+        """What changed between two graph versions (defaults to the last two)."""
+        tok = current_token()
+        return await anyio.to_thread.run_sync(
+            tools.graph_diff, tok, project, from_version, to_version
+        )
+
     return mcp
 
 
