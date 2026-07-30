@@ -15,7 +15,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from ckcommon.schema import GRAPHIFY_OUT_DIR
+import json
+
+from ckcommon.schema import GRAPH_JSON, GRAPHIFY_OUT_DIR
 from ckmcp.graphstore import GraphStore
 
 
@@ -46,3 +48,18 @@ class FsGraphRegistry:
         if not self._root.exists():
             return []
         return [p.name for p in self._root.iterdir() if (p / "current").exists()]
+
+    def _versions_dir(self, slug: str) -> Path:
+        return self._root / slug / "versions"
+
+    def list_versions(self, slug: str) -> list[str]:
+        vdir = self._versions_dir(slug)
+        if not vdir.exists():
+            return []
+        return sorted(p.name for p in vdir.iterdir() if p.is_dir())
+
+    def load_version_json(self, slug: str, version: str) -> dict:
+        path = self._versions_dir(slug) / version / GRAPHIFY_OUT_DIR / GRAPH_JSON
+        if not path.exists():
+            raise KeyError(f"version {version!r} of {slug!r} not found")
+        return json.loads(path.read_text())
