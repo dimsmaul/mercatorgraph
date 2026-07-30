@@ -11,7 +11,7 @@ from typing import Protocol
 
 from psycopg_pool import ConnectionPool
 
-from ckmcp import annotations, auth
+from ckmcp import annotations, auth, graphdiff
 from ckmcp.graphstore import GraphStore
 
 # hard caps — enforced regardless of caller input
@@ -22,6 +22,7 @@ SEARCH_LIMIT_HARD = 50
 DEPTH_DEFAULT = 2
 DEPTH_HARD = 4
 SUMMARY_TOP = 5
+DIFF_LIMIT = 100
 
 
 class ScopeError(PermissionError):
@@ -32,6 +33,8 @@ class GraphRegistry(Protocol):
     def has(self, slug: str) -> bool: ...
     def get(self, slug: str) -> GraphStore: ...
     def list_slugs(self) -> list[str]: ...
+    def list_versions(self, slug: str) -> list[str]: ...
+    def load_version_json(self, slug: str, version: str) -> dict: ...
 
 
 def _clamp(value: int | None, default: int, hard: int) -> int:
@@ -174,6 +177,36 @@ class Tools:
         impacted = store.blast_radius(node_id, depth=d)[:MAX_NODES_HARD]
         auth.audit(self._pool, token.principal, "blast_radius", project, node_id)
         return {"node_id": node_id, "depth": d, "impacted": impacted}
+
+    def graph_diff(
+        self,
+        token: auth.TokenInfo,
+        project: str,
+        from_version: str | None = None,
+        to_version: str | None = None,
+    ) -> dict:
+        self._require_scope(token, project)
+        versions = self._reg.list_versions(project)
+        if to_version is None or from_version is None:
+            if len(versions) < 2:
+                raise ValueError("need at least two versions to diff")
+            to_version = to_version or versions[-1]
+            from_version = from_version or versions[-2]
+        old = self._reg.load_version_json(project, from_version)
+        new = self._reg.load_version_json(project, to_version)
+        diff = graphdiff.diff_graphs(old, new)
+        for key in ("nodes_added", "nodes_removed", "edges_added", "edges_removed"):
+            diff[key] = diff[key][:DIFF_LIMIT]
+        diff["from_version"] = from_version
+        diff["to_version"] = to_version
+        auth.audit(
+            self._pool,
+            token.principal,
+            "graph_diff",
+            project,
+            f"{from_version}->{to_version}",
+        )
+        return diff
 
     def search(
         self,

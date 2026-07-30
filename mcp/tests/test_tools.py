@@ -18,8 +18,9 @@ pytestmark = pytest.mark.skipif(
 
 
 class DictRegistry:
-    def __init__(self, stores: dict[str, GraphStore]):
+    def __init__(self, stores: dict[str, GraphStore], versions=None):
         self._s = stores
+        self._versions = versions or {}
 
     def has(self, slug):
         return slug in self._s
@@ -29,6 +30,12 @@ class DictRegistry:
 
     def list_slugs(self):
         return list(self._s)
+
+    def list_versions(self, slug):
+        return sorted((self._versions.get(slug) or {}).keys())
+
+    def load_version_json(self, slug, version):
+        return self._versions[slug][version]
 
 
 @pytest.fixture
@@ -198,3 +205,52 @@ def test_annotation_survives_graph_rebuild(tools, pool):
     assert any(
         x["content"] == "still here after rebuild" for x in detail["annotations"]
     )
+
+
+# --- SP5: graph_diff -------------------------------------------------------
+
+
+def _mod_graph(graph, drop_id):
+    import json as _json
+
+    g = _json.loads(_json.dumps(graph))
+    g["nodes"] = [n for n in g["nodes"] if n["id"] != drop_id]
+    g["links"] = [
+        e for e in g["links"] if e["source"] != drop_id and e["target"] != drop_id
+    ]
+    return g
+
+
+@pytest.fixture
+def diff_tools(pool):
+    import json
+
+    store = GraphStore.from_dir(FIXTURE)
+    g = json.loads((FIXTURE / "graph.json").read_text())
+    versions = {"a": {"v1": g, "v2": _mod_graph(g, "svc_db_conn")}}
+    reg = DictRegistry({"a": store, "b": store}, versions=versions)
+    return Tools(reg, pool)
+
+
+def test_graph_diff_default_last_two(diff_tools):
+    res = diff_tools.graph_diff(TOK_A, "a")
+    removed = {n["id"] for n in res["nodes_removed"]}
+    assert "svc_db_conn" in removed
+    assert res["from_version"] == "v1"
+    assert res["to_version"] == "v2"
+
+
+def test_graph_diff_scope_denied(diff_tools):
+    with pytest.raises(ScopeError):
+        diff_tools.graph_diff(TOK_A, "b")
+
+
+def test_graph_diff_needs_two_versions(pool):
+    import json
+
+    store = GraphStore.from_dir(FIXTURE)
+    g = json.loads((FIXTURE / "graph.json").read_text())
+    reg = DictRegistry({"a": store}, versions={"a": {"only": g}})
+    t = Tools(reg, pool)
+    with pytest.raises(ValueError):
+        t.graph_diff(TOK_A, "a")
