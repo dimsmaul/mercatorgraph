@@ -293,6 +293,7 @@ version = "0.1.0"
 source = { editable = "worker" }
 dependencies = [
     { name = "ckcommon" },
+    { name = "ckdocs" },
     { name = "fastapi" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -300,6 +301,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "ckcommon", editable = "common" },
+    { name = "ckdocs", editable = "docs-gen" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]

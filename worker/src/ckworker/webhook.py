@@ -21,7 +21,7 @@ from ckworker.build import BuildOutcome, build_project
 from ckworker.cron import CronScheduler
 from ckworker.notify import Notifier
 from ckworker.debounce import BuildDebouncer
-from ckworker.promote import current_out_dir
+from ckworker.promote import current_out_dir, project_dir
 
 Builder = Callable[[str, ProjectConfig, bool], BuildOutcome]
 
@@ -48,6 +48,7 @@ def run_build_and_record(
     config: ProjectConfig,
     force: bool,
     notifier: "Notifier | None" = None,
+    regenerator: "Callable[[str], None] | None" = None,
 ) -> None:
     with pool.connection() as conn:
         build_id = conn.execute(
@@ -84,6 +85,11 @@ def run_build_and_record(
                 "edge_count": outcome.edge_count,
             }
         )
+    if regenerator is not None:
+        try:
+            regenerator(slug)
+        except Exception:  # noqa: BLE001 — docs regen never breaks the build
+            pass
 
 
 def create_app(
@@ -94,10 +100,25 @@ def create_app(
     debounce_seconds: float = 0.0,
     start_cron: bool = False,
     notify_url: str | None = None,
+    docs_content_dir: str | None = None,
 ) -> FastAPI:
     builder = builder or make_default_builder(data_dir)
     notifier = Notifier(notify_url)
     app = FastAPI(title="centralize-knowledge worker")
+
+    # regenerate the docs MDX after a promote (pipeline A still needs a docs rebuild to serve).
+    regenerator = None
+    if docs_content_dir:
+        def regenerator(slug: str) -> None:
+            out = current_out_dir(data_dir, slug)
+            if out is None:
+                return
+            version = os.path.basename(
+                os.readlink(project_dir(data_dir, slug) / "current")
+            )
+            from ckdocs import generate_project
+
+            generate_project(out, slug, version, docs_content_dir)
 
     # coalesce bursts of webhook pushes per project (PRD open-Q1). Off at <= 0.
     debouncer: BuildDebouncer | None = None
@@ -105,7 +126,7 @@ def create_app(
         debouncer = BuildDebouncer(
             debounce_seconds,
             lambda slug: run_build_and_record(
-                pool, slug, builder, projects[slug], False, notifier
+                pool, slug, builder, projects[slug], False, notifier, regenerator
             ),
         )
         app.state.debouncer = debouncer
@@ -122,7 +143,7 @@ def create_app(
     if start_cron:
         cron = CronScheduler(
             lambda slug: run_build_and_record(
-                pool, slug, builder, projects[slug], False, notifier
+                pool, slug, builder, projects[slug], False, notifier, regenerator
             )
         )
         app.state.cron = cron
@@ -158,7 +179,7 @@ def create_app(
             debouncer.trigger(slug)  # coalesce bursts
         else:
             background.add_task(
-                run_build_and_record, pool, slug, builder, cfg, False, notifier
+                run_build_and_record, pool, slug, builder, cfg, False, notifier, regenerator
             )
         return JSONResponse({"status": "accepted", "project": slug}, status_code=202)
 
@@ -166,7 +187,7 @@ def create_app(
     def rebuild(slug: str, background: BackgroundTasks, force: bool = False):
         cfg = _config(slug)
         background.add_task(
-            run_build_and_record, pool, slug, builder, cfg, force, notifier
+            run_build_and_record, pool, slug, builder, cfg, force, notifier, regenerator
         )
         return JSONResponse({"status": "accepted", "project": slug}, status_code=202)
 
@@ -260,6 +281,7 @@ def main() -> None:
         debounce_seconds=debounce,
         start_cron=True,
         notify_url=os.environ.get("NOTIFY_URL"),
+        docs_content_dir=os.environ.get("DOCS_CONTENT_DIR"),
     )
     uvicorn.run(app, host=os.environ.get("WORKER_HOST", "0.0.0.0"),
                 port=int(os.environ.get("WORKER_PORT", "8000")))

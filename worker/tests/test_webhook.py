@@ -185,6 +185,23 @@ def test_build_sends_notification(pool, tmp_path):
     assert sent[0]["node_count"] == 9
 
 
+def test_rebuild_regenerates_docs(pool, tmp_path):
+    data_dir = str(tmp_path / "data")
+    content = str(tmp_path / "content")
+    cfg = ProjectConfig(slug="demo", repo_url="https://x/demo.git", branch="main")
+
+    def builder(slug, config, force):
+        return build_project(
+            slug, config, data_dir, clone_fn=noop_clone, fixture=FIXTURE, force=force
+        )
+
+    app = create_app(pool, data_dir, {"demo": cfg}, builder=builder, docs_content_dir=content)
+    tc = TestClient(app)
+    tc.post("/projects/demo/rebuild")  # bg task builds + regenerates docs
+    assert (Path(content) / "demo" / "index.mdx").exists()
+    assert (Path(content) / "demo" / "node" / "svc_db_conn.mdx").exists()
+
+
 def test_cron_triggers_rebuild(pool, tmp_path, monkeypatch):
     data_dir = str(tmp_path / "data")
     cfg = ProjectConfig(
