@@ -179,9 +179,10 @@ def generate_project(
     index += f"# {slug}\n\n"
     index += f'<GraphEmbed slug="{slug}" />\n\n'
     index += "## Communities\n\n"
-    for (cid, cname), _ in sorted(communities.items(), key=lambda kv: kv[0][0] or 0):
+    index += "_Browse by cluster:_\n\n"
+    for (cid, cname), cnodes in sorted(communities.items(), key=lambda kv: kv[0][0] or 0):
         title = cname or f"Community {cid}"
-        index += f"- [{title}](/docs/{slug}/community-{cid})\n"
+        index += f"- [{title}](/docs/{slug}/community-{cid}) — {len(cnodes)} nodes\n"
     index += "\n## Report\n\n"
     index += _mdx_safe(report_text)
     (proj_dir / "index.mdx").write_text(index)

@@ -71,6 +71,17 @@ def test_community_links_to_nodes(generated):
     assert "/docs/demo/node/" in text
 
 
+def test_index_cluster_overview_has_counts(generated):
+    out_root, _ = generated
+    text = _read(out_root / "demo" / "index.mdx")
+    assert "Browse by cluster" in text
+    # each community link carries a node count for browse-by-cluster
+    assert "nodes" in text
+    import re
+
+    assert re.search(r"/docs/demo/community-\d+\) — \d+ nodes", text)
+
+
 def test_regeneration_is_idempotent(tmp_path):
     out_root = tmp_path / "content" / "docs"
     generate_project(FIXTURE, "demo", "v1", out_root)
