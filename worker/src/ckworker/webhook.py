@@ -202,6 +202,43 @@ def create_app(
             "finished_at": row[6].isoformat() if row[6] else None,
         }
 
+    @app.get("/stats/builds")
+    def stats_builds() -> dict:
+        """Per-project build counts by status + last successful build time."""
+        with pool.connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT project_slug,
+                       count(*) AS total,
+                       count(*) FILTER (WHERE status='succeeded') AS succeeded,
+                       count(*) FILTER (WHERE status='failed') AS failed,
+                       max(finished_at) FILTER (WHERE status='succeeded') AS last_ok
+                FROM builds GROUP BY project_slug ORDER BY project_slug
+                """
+            ).fetchall()
+        return {
+            "projects": [
+                {
+                    "slug": slug,
+                    "total": total,
+                    "succeeded": succeeded,
+                    "failed": failed,
+                    "last_build_at": last_ok.isoformat() if last_ok else None,
+                }
+                for slug, total, succeeded, failed, last_ok in rows
+            ]
+        }
+
+    @app.get("/stats/usage")
+    def stats_usage() -> dict:
+        """MCP tool usage counts from the audit log."""
+        with pool.connection() as conn:
+            rows = conn.execute(
+                "SELECT tool, count(*) FROM audit_log GROUP BY tool ORDER BY count(*) DESC"
+            ).fetchall()
+        tools = [{"tool": tool, "count": count} for tool, count in rows]
+        return {"tools": tools, "total": sum(t["count"] for t in tools)}
+
     return app
 
 

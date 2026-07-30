@@ -131,6 +131,38 @@ def test_unknown_project_404(client):
     assert tc.get("/projects/nope/status").status_code == 404
 
 
+def test_stats_builds(client):
+    tc, _, pool = client
+    tc.post("/projects/demo/rebuild")  # produces a succeeded build
+    with pool.connection() as conn:
+        conn.execute(
+            "INSERT INTO builds (project_slug, version_ts, status) "
+            "VALUES ('demo','x','failed')"
+        )
+        conn.commit()
+    data = tc.get("/stats/builds").json()
+    demo = next(p for p in data["projects"] if p["slug"] == "demo")
+    assert demo["succeeded"] >= 1
+    assert demo["failed"] >= 1
+    assert demo["total"] == demo["succeeded"] + demo["failed"]
+
+
+def test_stats_usage(client):
+    tc, _, pool = client
+    with pool.connection() as conn:
+        conn.execute(
+            "INSERT INTO audit_log (principal, tool, project_slug) "
+            "VALUES ('a','query_graph','demo'), ('a','query_graph','demo'), "
+            "('a','get_node','demo')"
+        )
+        conn.commit()
+    data = tc.get("/stats/usage").json()
+    counts = {t["tool"]: t["count"] for t in data["tools"]}
+    assert counts["query_graph"] == 2
+    assert counts["get_node"] == 1
+    assert data["total"] >= 3
+
+
 def test_build_sends_notification(pool, tmp_path):
     from ckworker.notify import Notifier
     from ckworker.webhook import run_build_and_record
