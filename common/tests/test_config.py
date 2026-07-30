@@ -44,6 +44,25 @@ def test_defaults_applied(projects_file):
     assert other.build_flags == []       # default empty
 
 
+def test_rebuild_interval_parsed(tmp_path):
+    p = tmp_path / "projects.yaml"
+    p.write_text(
+        textwrap.dedent(
+            """
+            projects:
+              - slug: demo
+                repo_url: https://x/demo.git
+                rebuild_interval: 3600
+              - slug: other
+                repo_url: https://x/other.git
+            """
+        )
+    )
+    projects = load_projects(p)
+    assert projects["demo"].rebuild_interval == 3600
+    assert projects["other"].rebuild_interval is None
+
+
 def test_resolve_secret_from_env(monkeypatch):
     monkeypatch.setenv("WEBHOOK_SECRET_DEMO", "s3cr3t")
     assert resolve_secret("WEBHOOK_SECRET_DEMO") == "s3cr3t"
