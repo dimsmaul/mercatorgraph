@@ -51,13 +51,17 @@ def list_comments(
     ]
 
 
-def set_status(pool: ConnectionPool, comment_id: int, status: str) -> bool:
+def set_status(
+    pool: ConnectionPool, project: str, comment_id: int, status: str
+) -> bool:
+    """Update a comment's status, scoped to its project (prevents cross-tenant writes)."""
     if status not in VALID_STATUS:
         raise ValueError(f"invalid status {status!r}")
     with pool.connection() as conn:
         row = conn.execute(
-            "UPDATE annotations SET status = %s WHERE id = %s RETURNING id",
-            (status, comment_id),
+            "UPDATE annotations SET status = %s WHERE id = %s AND project_slug = %s "
+            "RETURNING id",
+            (status, comment_id, project),
         ).fetchone()
         conn.commit()
     return row is not None

@@ -245,7 +245,7 @@ def create_app(
     def patch_comment(slug: str, comment_id: int, payload: dict = Body(...)) -> dict:
         _config(slug)
         try:
-            ok = comments.set_status(pool, comment_id, payload.get("status", ""))
+            ok = comments.set_status(pool, slug, comment_id, payload.get("status", ""))
         except ValueError:
             raise HTTPException(status_code=422, detail="invalid status")
         if not ok:
