@@ -19,9 +19,9 @@ cost.json
 **/graphify-out/cost.json
 
 # Node / Fumadocs docs app
-docs/node_modules/
-docs/.next/
-docs/.source/
+view/node_modules/
+view/.next/
+view/.source/
 # generated MDX content (derived from graph via ckdocs); keep the committed landing index
-docs/content/docs/*/
-docs/content/docs/versions.json
+view/content/docs/*/
+view/content/docs/versions.json

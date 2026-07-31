@@ -9,7 +9,7 @@ Published to `ghcr.io/<owner>/<repo>/<service>`:
 
 - `ghcr.io/dimsmaul/mercatorgraph/worker`
 - `ghcr.io/dimsmaul/mercatorgraph/mcp`
-- `ghcr.io/dimsmaul/mercatorgraph/docs`
+- `ghcr.io/dimsmaul/mercatorgraph/view`
 
 ## Two mechanisms
 
@@ -67,7 +67,7 @@ tag `vX.Y.Z[-beta.N]` → creates a GitHub Release (betas marked *pre-release*).
 ```bash
 docker pull ghcr.io/dimsmaul/mercatorgraph/worker:0.2.3
 docker pull ghcr.io/dimsmaul/mercatorgraph/mcp:0.2.3
-docker pull ghcr.io/dimsmaul/mercatorgraph/docs:0.2.3
+docker pull ghcr.io/dimsmaul/mercatorgraph/view:0.2.3
 ```
 
 Or deploy the whole stack against a published tag:
@@ -92,7 +92,7 @@ in the tag:
 ```
 docker.io/dimsmaul/mercatorgraph:worker-0.1.0   (+ :worker-latest on release)
 docker.io/dimsmaul/mercatorgraph:mcp-0.1.0
-docker.io/dimsmaul/mercatorgraph:docs-0.1.0
+docker.io/dimsmaul/mercatorgraph:view-0.1.0
 ```
 
 Pull from Docker Hub:
@@ -100,7 +100,7 @@ Pull from Docker Hub:
 ```bash
 docker pull dimsmaul/mercatorgraph:worker-0.1.0
 docker pull dimsmaul/mercatorgraph:mcp-0.1.0
-docker pull dimsmaul/mercatorgraph:docs-0.1.0
+docker pull dimsmaul/mercatorgraph:view-0.1.0
 ```
 
 Without the secrets, the Docker Hub step is skipped and only GHCR is published.

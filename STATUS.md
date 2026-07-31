@@ -82,7 +82,7 @@ These are inside already-shipped phases — small but real.
       verified in a clean image (`/api/config` reflects the container env).
 - [x] ~~Empty docs image on clean checkout~~ — committed landing page; clean build serves `/docs`.
 - [x] **Auto-regen docs on promote** — worker regenerates the MDX via `ckdocs` into
-      `DOCS_CONTENT_DIR` after each promote (best-effort). A docs *rebuild* to serve new
+      `VIEW_CONTENT_DIR` after each promote (best-effort). A docs *rebuild* to serve new
       content is still separate under pipeline A.
 - [ ] **Live browser e2e** of `StaleBadge` / `GraphEmbed` against a running worker (code
       path + CORS + `/api/config` proven; full browser round-trip not yet exercised).

@@ -53,10 +53,10 @@ services:
     ports:
       - "8080:8080"
 
-  docs:
-    image: ${IMAGE_PREFIX:-mercatorgraph}/docs:${TAG:-dev}
+  view:
+    image: ${IMAGE_PREFIX:-mercatorgraph}/view:${TAG:-dev}
     build:
-      context: ./docs
+      context: ./view
       dockerfile: Dockerfile
     environment:
       # browser-reachable worker URL, served to the client via /api/config

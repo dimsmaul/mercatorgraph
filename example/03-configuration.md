@@ -6,7 +6,7 @@
 |---------|----------------|-------------------|-------|
 | worker  | 8000 | 8000 | webhook / rebuild / status / stats / graph.html |
 | mcp     | 8080 | 8080 | agent MCP endpoint (`/mcp`, bearer token) |
-| docs    | 3000 | 3000 | human browse UI |
+| view    | 3000 | 3000 | human browse UI |
 | postgres| 5432 | — (internal) | not exposed by default |
 
 If a host port is taken (e.g. `8080`), remap the left side in `docker-compose.yml`
@@ -59,10 +59,10 @@ Old versions are pruned (default: keep 5).
 |-----|---------|---------|
 | `DATA_DIR` | `/data` | graph volume mount |
 | `PROJECTS_CONFIG` | `/app/projects.yaml` | project registry file |
-| `WORKER_CORS_ORIGINS` | `*` | allowed origins for browser calls from the docs app |
+| `WORKER_CORS_ORIGINS` | `*` | allowed origins for browser calls from the view app |
 | `DEBOUNCE_SECONDS` | `0` | coalesce bursts of webhook pushes per project into one build (0 = off) |
 | `NOTIFY_URL` | — | POST a `build.succeeded` event here on promote (Slack-compatible). Empty = off |
-| `DOCS_CONTENT_DIR` | — | regenerate docs MDX into this dir after each promote. Empty = off |
+| `VIEW_CONTENT_DIR` | — | regenerate docs MDX into this dir after each promote. Empty = off |
 | `ENCRYPTION_KEY` | — | Fernet key to decrypt repo deploy keys at rest (see 05-production) |
 
 ### MCP
@@ -72,7 +72,7 @@ Old versions are pruned (default: keep 5).
 | `MCP_HOST` | `0.0.0.0` | bind host |
 | `MCP_PORT` | `8080` | bind port |
 
-### Docs
+### View (graph viewer)
 
 | Var | Default | Purpose |
 |-----|---------|---------|

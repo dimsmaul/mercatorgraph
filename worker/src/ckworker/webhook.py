@@ -310,7 +310,7 @@ def main() -> None:
         debounce_seconds=debounce,
         start_cron=True,
         notify_url=os.environ.get("NOTIFY_URL"),
-        docs_content_dir=os.environ.get("DOCS_CONTENT_DIR"),
+        docs_content_dir=os.environ.get("VIEW_CONTENT_DIR"),
     )
     uvicorn.run(app, host=os.environ.get("WORKER_HOST", "0.0.0.0"),
                 port=int(os.environ.get("WORKER_PORT", "8000")))

@@ -16,7 +16,7 @@ has a different job, a different consumer, and a different performance profile.
                     └──────────────┘        └──────────────┘
                            ▲
                     ┌──────┴───────┐
-                    │     docs     │  human browse UI (optional)
+                    │      view      │  graph viewer (optional)
                     │  (Next.js)   │◄──── developers (browser)
                     └──────────────┘
 
@@ -50,7 +50,7 @@ has a different job, a different consumer, and a different performance profile.
   version, the mcp server hot-swaps to it without dropping in-flight reads.
 - **Hard rule:** no tool ever returns the whole graph — scoped answers only.
 
-## docs — the human UI (optional)
+## view — the human UI (graph viewer) (optional)
 
 - **Does:** renders the graph as browsable pages — a page per project, per community
   (cluster), and per node (with its edges), plus cross-project search, a staleness badge, and
@@ -71,6 +71,6 @@ contributed knowledge is durable.**
 
 ## Minimal vs full deployment
 
-- **Agents only:** postgres + worker + mcp. (No docs.)
-- **Agents + humans:** add docs.
+- **Agents only:** postgres + worker + mcp. (No view.)
+- **Agents + humans:** add view.
 - The worker and mcp **must share the `/data` volume**; that's the one hard coupling.

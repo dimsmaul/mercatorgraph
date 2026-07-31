@@ -26,11 +26,11 @@ TAG=0.1.1
 docker compose up -d
 ```
 
-This starts **postgres + worker + mcp + docs**. Check health:
+This starts **postgres + worker + mcp + view**. Check health:
 
 ```bash
 curl -s localhost:8000/health     # worker  -> {"status":"ok"}
-open http://localhost:3000/docs    # docs app (humans)
+open http://localhost:3000/docs    # view app (humans)
 # mcp listens on :8080/mcp (bearer-token required)
 ```
 

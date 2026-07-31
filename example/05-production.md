@@ -67,7 +67,6 @@ a channel that a project's graph (and therefore its docs) changed.
 
 ## Docs freshness (pipeline A)
 
-The docs app compiles content at **image build time**. A newly built project does not appear
-in a running docs container until the docs image is rebuilt with regenerated content. Set
-`DOCS_CONTENT_DIR` so the worker regenerates the MDX on promote, then rebuild/redeploy the docs
-image on your schedule. The staleness badge surfaces the lag in the meantime.
+The view app compiles content at **image build time**. A newly built project does not appear
+in a running view container until the view image is rebuilt with regenerated content. Set
+`VIEW_CONTENT_DIR` so the worker regenerates the MDX on promote, then rebuild/redeploy the view image on your schedule. The staleness badge surfaces the lag in the meantime.

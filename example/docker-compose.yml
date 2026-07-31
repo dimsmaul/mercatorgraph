@@ -55,9 +55,9 @@ services:
     ports:
       - "8080:8080"
 
-  # optional — human browse UI. Remove this service if you only need agents.
-  docs:
-    image: ${IMAGE_PREFIX:-ghcr.io/dimsmaul/mercatorgraph}/docs:${TAG:-latest}
+  # optional — human browse UI (graph viewer). Remove this service if you only need agents.
+  view:
+    image: ${IMAGE_PREFIX:-ghcr.io/dimsmaul/mercatorgraph}/view:${TAG:-latest}
     environment:
       WORKER_URL: ${PUBLIC_WORKER_URL:-http://localhost:8000}
     depends_on:
