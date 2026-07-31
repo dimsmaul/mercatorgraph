@@ -9,6 +9,7 @@ COPY pyproject.toml uv.lock ./
 COPY common ./common
 COPY worker ./worker
 COPY mcp ./mcp
+COPY docs-gen ./docs-gen
 RUN uv sync --frozen --no-dev --all-packages
 
 ENV DATA_DIR=/data MCP_HOST=0.0.0.0 MCP_PORT=8080

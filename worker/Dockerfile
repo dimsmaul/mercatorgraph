@@ -17,6 +17,7 @@ COPY pyproject.toml uv.lock ./
 COPY common ./common
 COPY worker ./worker
 COPY mcp ./mcp
+COPY docs-gen ./docs-gen
 RUN uv sync --frozen --no-dev --all-packages
 
 COPY db ./db
