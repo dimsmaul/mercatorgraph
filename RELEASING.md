@@ -7,9 +7,9 @@ the **latest commit subject** on `main`. Workflow: `.github/workflows/release.ym
 
 Published to `ghcr.io/<owner>/<repo>/<service>`:
 
-- `ghcr.io/dimsmaul/centralize-knowledge/worker`
-- `ghcr.io/dimsmaul/centralize-knowledge/mcp`
-- `ghcr.io/dimsmaul/centralize-knowledge/docs`
+- `ghcr.io/dimsmaul/mercatorgraph/worker`
+- `ghcr.io/dimsmaul/mercatorgraph/mcp`
+- `ghcr.io/dimsmaul/mercatorgraph/docs`
 
 ## Two mechanisms
 
@@ -65,15 +65,15 @@ tag `vX.Y.Z[-beta.N]` → creates a GitHub Release (betas marked *pre-release*).
 ## Pull published images
 
 ```bash
-docker pull ghcr.io/dimsmaul/centralize-knowledge/worker:0.2.3
-docker pull ghcr.io/dimsmaul/centralize-knowledge/mcp:0.2.3
-docker pull ghcr.io/dimsmaul/centralize-knowledge/docs:0.2.3
+docker pull ghcr.io/dimsmaul/mercatorgraph/worker:0.2.3
+docker pull ghcr.io/dimsmaul/mercatorgraph/mcp:0.2.3
+docker pull ghcr.io/dimsmaul/mercatorgraph/docs:0.2.3
 ```
 
 Or deploy the whole stack against a published tag:
 
 ```bash
-IMAGE_PREFIX=ghcr.io/dimsmaul/centralize-knowledge TAG=0.2.3 \
+IMAGE_PREFIX=ghcr.io/dimsmaul/mercatorgraph TAG=0.2.3 \
   docker compose -f docker-compose.deploy.yml up -d
 ```
 

@@ -1,4 +1,4 @@
-# Centralized Codebase Knowledge Platform
+# Mercatorgraph
 
 Self-hosted platform that turns [Graphify](https://github.com/Graphify-Labs/graphify)
 into **one centralized knowledge graph per project**, served to many AI agents (via MCP)

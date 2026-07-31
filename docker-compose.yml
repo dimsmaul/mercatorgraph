@@ -14,7 +14,7 @@ services:
       retries: 20
 
   worker:
-    image: ${IMAGE_PREFIX:-ck}/worker:${TAG:-dev}
+    image: ${IMAGE_PREFIX:-mercatorgraph}/worker:${TAG:-dev}
     build:
       context: .
       dockerfile: worker/Dockerfile
@@ -35,7 +35,7 @@ services:
       - "8000:8000"
 
   mcp:
-    image: ${IMAGE_PREFIX:-ck}/mcp:${TAG:-dev}
+    image: ${IMAGE_PREFIX:-mercatorgraph}/mcp:${TAG:-dev}
     build:
       context: .
       dockerfile: mcp/Dockerfile
@@ -54,7 +54,7 @@ services:
       - "8080:8080"
 
   docs:
-    image: ${IMAGE_PREFIX:-ck}/docs:${TAG:-dev}
+    image: ${IMAGE_PREFIX:-mercatorgraph}/docs:${TAG:-dev}
     build:
       context: ./docs
       dockerfile: Dockerfile

@@ -1,6 +1,6 @@
 # Fase 2 — Docs App Design Spec
 
-**Project:** Centralized Codebase Knowledge Platform (Graphify-based)
+**Project:** Mercatorgraph (Graphify-based)
 **Phase:** Fase 2 — Human-readable docs app (Fumadocs)
 **Date:** 2026-07-28
 **Status:** Approved for implementation (pipeline **A**)

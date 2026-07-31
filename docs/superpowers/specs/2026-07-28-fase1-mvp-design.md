@@ -1,6 +1,6 @@
 # Fase 1 MVP — Design Spec
 
-**Project:** Centralized Codebase Knowledge Platform (Graphify-based)
+**Project:** Mercatorgraph (Graphify-based)
 **Phase:** Fase 1 — Centralized Read-Only (Python only)
 **Date:** 2026-07-28
 **Status:** Approved for planning

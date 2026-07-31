@@ -1,4 +1,4 @@
-# CLAUDE.md — Centralized Codebase Knowledge Platform
+# CLAUDE.md — Mercatorgraph
 
 Repo conventions for this project. Read before editing.
 

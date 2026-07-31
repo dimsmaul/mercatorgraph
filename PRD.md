@@ -1,4 +1,4 @@
-# PRD — Centralized Codebase Knowledge Platform (Graphify-based)
+# PRD — Mercatorgraph (Graphify-based)
 
 **Status:** Draft v1
 **Tanggal:** 28 Juli 2026

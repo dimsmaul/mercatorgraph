@@ -105,7 +105,7 @@ def create_app(
 ) -> FastAPI:
     builder = builder or make_default_builder(data_dir)
     notifier = Notifier(notify_url)
-    app = FastAPI(title="centralize-knowledge worker")
+    app = FastAPI(title="mercatorgraph worker")
 
     # regenerate the docs MDX after a promote (pipeline A still needs a docs rebuild to serve).
     regenerator = None

@@ -50,7 +50,7 @@ def current_token() -> auth.TokenInfo:
 def build_server(pool: ConnectionPool, data_dir: str) -> FastMCP:
     registry = FsGraphRegistry(data_dir)
     tools = Tools(registry, pool)
-    mcp: FastMCP = FastMCP(name="centralize-knowledge", auth=DbTokenVerifier(pool))
+    mcp: FastMCP = FastMCP(name="mercatorgraph", auth=DbTokenVerifier(pool))
 
     @mcp.tool
     async def list_projects() -> list[dict]:

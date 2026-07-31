@@ -1,7 +1,7 @@
 [project]
-name = "centralize-knowledge"
+name = "mercatorgraph"
 version = "0.1.0"
-description = "Centralized codebase knowledge platform (Graphify-based)"
+description = "Mercatorgraph — codebase knowledge platform (Graphify-based)"
 requires-python = ">=3.12"
 
 [tool.uv.workspace]

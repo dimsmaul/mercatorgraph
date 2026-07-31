@@ -1,6 +1,6 @@
 # Acceptance / E2E Suite — Design Spec
 
-**Project:** Centralized Codebase Knowledge Platform
+**Project:** Mercatorgraph
 **Date:** 2026-07-29
 **Status:** Approved for planning
 **Depends on:** Fase 1 + Fase 2 (implemented).
