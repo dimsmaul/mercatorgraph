@@ -31,6 +31,12 @@ knowledge (Fase 3) is durable (Postgres, overlaid at query) — never written in
 
 ## Quickstart (Docker)
 
+> Running from **published images**? See [`example/`](example/) — a full guide (install,
+> quickstart, config/volumes, the worker/mcp/docs split, production) with a ready-to-run
+> `docker-compose.yml`.
+
+Building from source:
+
 ```bash
 cp .env.example .env          # set POSTGRES_PASSWORD etc.
 docker compose up -d --build  # postgres + worker + mcp + docs

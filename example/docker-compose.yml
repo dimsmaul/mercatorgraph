@@ -1,0 +1,71 @@
+# Mercatorgraph — run the published images (no build).
+#   cp .env.example .env      # then edit POSTGRES_PASSWORD, TAG, etc.
+#   docker compose up -d
+#
+# Images default to GHCR path-style: ${IMAGE_PREFIX}/<service>:${TAG}
+# For Docker Hub (single repo, service-in-tag), replace each `image:` with e.g.
+#   image: dimsmaul/mercatorgraph:worker-${TAG}
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-knowledge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-knowledge}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-knowledge}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  worker:
+    image: ${IMAGE_PREFIX:-ghcr.io/dimsmaul/mercatorgraph}/worker:${TAG:-latest}
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-knowledge}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-knowledge}
+      DATA_DIR: /data
+      PROJECTS_CONFIG: /app/projects.yaml
+      WORKER_CORS_ORIGINS: ${WORKER_CORS_ORIGINS:-*}
+      DEBOUNCE_SECONDS: ${DEBOUNCE_SECONDS:-0}
+      NOTIFY_URL: ${NOTIFY_URL:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+    volumes:
+      - graphdata:/data                          # shared with mcp (worker writes)
+      - ./projects.yaml:/app/projects.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  mcp:
+    image: ${IMAGE_PREFIX:-ghcr.io/dimsmaul/mercatorgraph}/mcp:${TAG:-latest}
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-knowledge}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-knowledge}
+      DATA_DIR: /data
+      MCP_PORT: "8080"
+    volumes:
+      - graphdata:/data                          # shared with worker (mcp reads)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+  # optional — human browse UI. Remove this service if you only need agents.
+  docs:
+    image: ${IMAGE_PREFIX:-ghcr.io/dimsmaul/mercatorgraph}/docs:${TAG:-latest}
+    environment:
+      WORKER_URL: ${PUBLIC_WORKER_URL:-http://localhost:8000}
+    depends_on:
+      worker:
+        condition: service_started
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  graphdata:

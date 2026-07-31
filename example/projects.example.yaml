@@ -1,0 +1,15 @@
+# Repos the worker knows how to build. Secrets are referenced by env-var name, never inlined.
+# Each project also needs a row in the `projects` table (see 02-quickstart.md step 3).
+projects:
+  - slug: demo
+    repo_url: https://github.com/octocat/Hello-World.git
+    branch: master
+    build_flags: []                          # extra flags passed to `graphify update`
+    webhook_secret_ref: WEBHOOK_SECRET_DEMO  # env var holding the HMAC secret
+    # rebuild_interval: 3600                  # optional: seconds between automatic rebuilds (cron)
+    # deploy_key_ref: /run/secrets/demo_deploy.enc   # encrypted SSH key for a private repo
+
+  # - slug: my-service
+  #   repo_url: git@github.com:acme/my-service.git
+  #   branch: main
+  #   deploy_key_ref: /run/secrets/my_service_deploy.enc
