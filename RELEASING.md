@@ -77,6 +77,34 @@ IMAGE_PREFIX=ghcr.io/dimsmaul/mercatorgraph TAG=0.2.3 \
   docker compose -f docker-compose.deploy.yml up -d
 ```
 
+## Also publishing to Docker Hub (optional)
+
+GHCR is always used. To **also** push to Docker Hub, add these repo secrets
+(Settings → Secrets and variables → Actions):
+
+- `DOCKERHUB_USERNAME` — e.g. `dimsmaul`
+- `DOCKERHUB_TOKEN` — a Docker Hub access token (Account Settings → Security)
+- (optional) variable `DOCKERHUB_REPO` — defaults to `mercatorgraph`
+
+Docker Hub has **no sub-paths**, so all three images share one repo with the service encoded
+in the tag:
+
+```
+docker.io/dimsmaul/mercatorgraph:worker-0.1.0   (+ :worker-latest on release)
+docker.io/dimsmaul/mercatorgraph:mcp-0.1.0
+docker.io/dimsmaul/mercatorgraph:docs-0.1.0
+```
+
+Pull from Docker Hub:
+
+```bash
+docker pull dimsmaul/mercatorgraph:worker-0.1.0
+docker pull dimsmaul/mercatorgraph:mcp-0.1.0
+docker pull dimsmaul/mercatorgraph:docs-0.1.0
+```
+
+Without the secrets, the Docker Hub step is skipped and only GHCR is published.
+
 ## Notes
 
 - Auth uses the built-in `GITHUB_TOKEN` (no extra secret). GHCR packages are **private** by

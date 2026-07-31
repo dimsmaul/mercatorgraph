@@ -42,6 +42,12 @@ jobs:
     needs: version
     if: needs.version.outputs.channel != 'none'
     runs-on: ubuntu-latest
+    # Docker Hub push is optional: set repo secrets DOCKERHUB_USERNAME + DOCKERHUB_TOKEN
+    # (and optionally var DOCKERHUB_REPO, default "mercatorgraph") to also publish to
+    # docker.io/<user>/<repo>:<service>-<version>. Without them, only GHCR is used.
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'mercatorgraph' }}
     strategy:
       matrix:
         include:
@@ -62,14 +68,29 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: login to docker hub (optional)
+        if: env.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - id: tags
+        env:
+          SERVICE: ${{ matrix.name }}
+          CHANNEL: ${{ needs.version.outputs.channel }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          ver="${{ needs.version.outputs.version }}"   # vX.Y.Z[-beta.N]
-          semver="${ver#v}"
-          img="${IMAGE_BASE}/${{ matrix.name }}"
-          tags="${img}:${semver}"
-          if [ "${{ needs.version.outputs.channel }}" = "release" ]; then
-            tags="${tags},${img}:latest"
+          semver="${VERSION#v}"
+          # GHCR: one image repo per service, plain version tag (+ :latest on release)
+          ghcr="${IMAGE_BASE}/${SERVICE}"
+          tags="${ghcr}:${semver}"
+          [ "$CHANNEL" = "release" ] && tags="${tags},${ghcr}:latest"
+          # Docker Hub: single repo, service encoded in the tag (no sub-paths on Hub)
+          if [ -n "$DOCKERHUB_USERNAME" ]; then
+            hub="docker.io/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}"
+            tags="${tags},${hub}:${SERVICE}-${semver}"
+            [ "$CHANNEL" = "release" ] && tags="${tags},${hub}:${SERVICE}-latest"
           fi
           echo "tags=${tags}" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
