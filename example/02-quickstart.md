@@ -29,8 +29,8 @@ docker compose up -d
 This starts **postgres + worker + mcp + view**. Check health:
 
 ```bash
-curl -s localhost:8000/health     # worker  -> {"status":"ok"}
-open http://localhost:3000/docs    # view app (humans)
+curl -s localhost:19883/health     # worker  -> {"status":"ok"}
+open http://localhost:19885/docs    # view app (humans)
 # mcp listens on :8080/mcp (bearer-token required)
 ```
 
@@ -47,8 +47,8 @@ docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
   "INSERT INTO projects (slug, repo_url) VALUES ('demo','https://github.com/octocat/Hello-World.git') ON CONFLICT DO NOTHING;"
 
 # build it
-curl -X POST localhost:8000/projects/demo/rebuild
-curl localhost:8000/projects/demo/status     # wait until "status":"succeeded"
+curl -X POST localhost:19883/projects/demo/rebuild
+curl localhost:19883/projects/demo/status     # wait until "status":"succeeded"
 ```
 
 ## 4. Mint a scoped agent token
@@ -70,7 +70,7 @@ Use `ARRAY['*']` instead of `ARRAY['demo']` to scope the token to every project.
 Claude Code:
 
 ```bash
-claude mcp add mercatorgraph --transport http http://localhost:8080/mcp \
+claude mcp add mercatorgraph --transport http http://localhost:19884/mcp \
   --header "Authorization: Bearer my-agent-token"
 ```
 
@@ -81,7 +81,7 @@ Or any MCP client via project `.mcp.json`:
   "mcpServers": {
     "mercatorgraph": {
       "type": "http",
-      "url": "http://localhost:8080/mcp",
+      "url": "http://localhost:19884/mcp",
       "headers": { "Authorization": "Bearer my-agent-token" }
     }
   }

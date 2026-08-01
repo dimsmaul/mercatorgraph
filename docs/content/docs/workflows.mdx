@@ -22,8 +22,8 @@ A maintainer registers a repository once. The worker builds its graph and promot
 
 ```bash
 # register (see Getting Started for full steps)
-curl -X POST localhost:8000/projects/demo/rebuild
-curl localhost:8000/projects/demo/status     # wait for "succeeded"
+curl -X POST localhost:19883/projects/demo/rebuild
+curl localhost:19883/projects/demo/status     # wait for "succeeded"
 ```
 
 ## 2. Agent query (the everyday path)

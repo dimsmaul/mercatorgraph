@@ -32,7 +32,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${WORKER_HOST_PORT:-19883}:8000"
 
   mcp:
     image: ${IMAGE_PREFIX:-mercatorgraph}/mcp:${TAG:-dev}
@@ -51,7 +51,7 @@ services:
       worker:
         condition: service_started
     ports:
-      - "8080:8080"
+      - "${MCP_HOST_PORT:-19884}:8080"
 
   view:
     image: ${IMAGE_PREFIX:-mercatorgraph}/view:${TAG:-dev}
@@ -60,12 +60,12 @@ services:
       dockerfile: Dockerfile
     environment:
       # browser-reachable worker URL, served to the client via /api/config
-      WORKER_URL: ${PUBLIC_WORKER_URL:-http://localhost:8000}
+      WORKER_URL: ${PUBLIC_WORKER_URL:-http://localhost:19883}
     depends_on:
       worker:
         condition: service_started
     ports:
-      - "3000:3000"
+      - "${VIEW_HOST_PORT:-19885}:3000"
 
 volumes:
   pgdata:

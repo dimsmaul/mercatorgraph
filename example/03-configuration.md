@@ -4,9 +4,9 @@
 
 | Service | Container port | Default host port | Notes |
 |---------|----------------|-------------------|-------|
-| worker  | 8000 | 8000 | webhook / rebuild / status / stats / graph.html |
-| mcp     | 8080 | 8080 | agent MCP endpoint (`/mcp`, bearer token) |
-| view    | 3000 | 3000 | human browse UI |
+| worker  | 8000 | 19883 | webhook / rebuild / status / stats / graph.html |
+| mcp     | 8080 | 19884 | agent MCP endpoint (`/mcp`, bearer token) |
+| view    | 3000 | 19885 | human browse UI |
 | postgres| 5432 | — (internal) | not exposed by default |
 
 If a host port is taken (e.g. `8080`), remap the left side in `docker-compose.yml`
@@ -76,7 +76,7 @@ Old versions are pruned (default: keep 5).
 
 | Var | Default | Purpose |
 |-----|---------|---------|
-| `WORKER_URL` / `PUBLIC_WORKER_URL` | `http://localhost:8000` | browser-reachable worker URL (staleness badge + graph embed fetch it at runtime via `/api/config`) |
+| `WORKER_URL` / `PUBLIC_WORKER_URL` | `http://localhost:19883` | browser-reachable worker URL (staleness badge + graph embed fetch it at runtime via `/api/config`) |
 
 ## `projects.yaml`
 

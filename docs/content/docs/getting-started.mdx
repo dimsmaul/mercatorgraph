@@ -22,7 +22,7 @@ docker compose up -d      # postgres + worker + mcp + view
 Check it is up:
 
 ```bash
-curl -s localhost:8000/health     # worker -> {"status":"ok"}
+curl -s localhost:19883/health     # worker -> {"status":"ok"}
 ```
 
 ## 2. Register + build a project
@@ -31,8 +31,8 @@ curl -s localhost:8000/health     # worker -> {"status":"ok"}
 docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
   "INSERT INTO projects (slug, repo_url) VALUES ('demo','https://github.com/octocat/Hello-World.git') ON CONFLICT DO NOTHING;"
 
-curl -X POST localhost:8000/projects/demo/rebuild
-curl localhost:8000/projects/demo/status     # wait for "succeeded"
+curl -X POST localhost:19883/projects/demo/rebuild
+curl localhost:19883/projects/demo/status     # wait for "succeeded"
 ```
 
 ## 3. Mint a scoped agent token
@@ -47,7 +47,7 @@ docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
 ## 4. Connect an agent
 
 ```bash
-claude mcp add mercatorgraph --transport http http://localhost:8080/mcp \
+claude mcp add mercatorgraph --transport http http://localhost:19884/mcp \
   --header "Authorization: Bearer my-agent-token"
 ```
 
