@@ -1,0 +1,87 @@
+---
+title: Team Workflow
+description: How a team of developers and agents shares one knowledge graph.
+---
+
+# Team Workflow
+
+Mercatorgraph replaces N private, out-of-sync local graphs with **one shared graph per
+project**. Here is how a team actually uses it.
+
+## Roles
+
+<Mermaid chart={`flowchart TB
+  subgraph team["A team"]
+    m["Maintainer\n(registers repos, mints tokens, manages access)"]
+    d["Developers\n(query via their agents, browse the viewer, leave comments)"]
+    a["AI Agents\n(query the MCP server, add annotations)"]
+  end
+  m -->|registers| repo["project + webhook"]
+  d -->|use| agents["their coding agents"]
+  agents --> mcp["mcp server"]
+  a --> mcp
+  d -->|browse| view["graph viewer"]`} />
+
+| Role | Does | Touches |
+|------|------|---------|
+| **Maintainer** | register repos, configure webhooks, mint/scope/revoke tokens | `projects.yaml`, Postgres, worker |
+| **Developer** | ask their agent about the codebase, browse the viewer, leave comments | agent, viewer |
+| **Agent** | query the graph, add annotations | MCP server |
+
+## Onboarding a repository (once)
+
+<Mermaid chart={`flowchart LR
+  a["1. add to projects.yaml\n+ projects row"] --> b["2. add repo webhook → /webhook/&lt;slug&gt;"]
+  b --> c["3. first build"] --> d["4. mint team tokens (scoped)"]
+  d --> e["team's agents can query"]`} />
+
+After this, every push keeps the graph current automatically — nobody rebuilds locally.
+
+## Access model
+
+- **One token per developer or per agent**, scoped to the projects they may read.
+- Scope is an array of project slugs, or `['*']` for everything.
+- Tokens can **expire** and be **revoked**; every query is in the `audit_log`.
+
+<Mermaid chart={`flowchart TB
+  t1["dev-alice token → scopes: [web, api]"] --> mcp["mcp"]
+  t2["ci-agent token → scopes: ['*']"] --> mcp
+  t3["contractor token → scopes: [web], expires in 30d"] --> mcp
+  mcp --> chk{"scope + expiry + revoked?"}
+  chk -->|ok| ok["scoped results + audit"]
+  chk -->|no| deny["denied + audited"]`} />
+
+```bash
+# scope a contractor to one project, for a limited time
+docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
+  "INSERT INTO tokens (token_hash, principal, scopes, expires_at)
+   VALUES ('<sha256>', 'contractor-bob', ARRAY['web'], now() + interval '30 days');"
+```
+
+## The knowledge feedback loop
+
+The graph captures *structure*; people capture *intent*. Over time the team's collective
+understanding accumulates as contributed knowledge that new joiners (and new agents) inherit.
+
+<Mermaid chart={`flowchart LR
+  q["agent/dev hits a confusing node"] --> c["leave a comment / annotation"]
+  c --> db[("Postgres — durable")]
+  db --> next["next agent's get_node shows the context"]
+  next --> less["less re-discovery, faster onboarding"]
+  less --> q`} />
+
+Thread status moves `open → addressed-by-agent → resolved`, so comments are trackable rather
+than lost in chat.
+
+## What a new team member gets on day one
+
+- Point their agent at the MCP server with a scoped token — instant, shared understanding of
+  every registered repo.
+- Open the viewer to browse a repo's structure, clusters, and per-node context.
+- Read accumulated annotations instead of interrupting teammates.
+
+## Anti-goals
+
+- Agents never write to the codebase or the graph directly — contributions are review-gated
+  (comments/annotations now; a comment → agent → PR loop is on the roadmap).
+- No agent ever receives the whole graph — only scoped, capped slices.

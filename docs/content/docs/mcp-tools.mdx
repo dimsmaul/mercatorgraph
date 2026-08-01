@@ -1,0 +1,107 @@
+---
+title: MCP Tools
+description: The eight tools the MCP server exposes to agents, with inputs and outputs.
+---
+
+# MCP Tools
+
+Agents connect to the MCP server over HTTP with a bearer token and call these tools. Every
+tool checks project scope, enforces a hard size cap, and writes to the audit log. **No tool
+ever returns the whole graph.**
+
+Connect:
+
+```bash
+claude mcp add mercatorgraph --transport http http://localhost:8080/mcp \
+  --header "Authorization: Bearer <token>"
+```
+
+## Discovery
+
+### `list_projects`
+
+Projects the caller's token can see, with last-build stats.
+
+- **Input:** none
+- **Output:** `[{ slug, last_build, node_count, edge_count }]`
+
+### `search`
+
+Full-text search over node labels, source files, and the graph report.
+
+- **Input:** `query`, `project?`, `limit?`
+- **Output:** `{ query, hits: [{ kind, ref, text, project }] }`
+- Omit `project` for a **cross-project** search — results are intersected with the token's
+  scopes. Capped (default 20, max 50).
+
+## Exploration
+
+### `get_node`
+
+A node's detail, its direct edges, and any contributed annotations.
+
+- **Input:** `project`, `node_id`
+- **Output:** `{ id, label, source_file, edges: [...], annotations: [{ content, tag: "CONTRIBUTED", ... }] }`
+
+### `query_graph`
+
+A scoped subgraph plus a deterministic summary for a natural-language question.
+
+- **Input:** `project`, `question`, `max_nodes?`
+- **Output:** `{ nodes: [...], edges: [...], summary }`
+- FTS seed → depth-limited neighborhood, capped (default 30, max 100 nodes). Each node
+  carries an `annotation_count`.
+
+### `trace_path`
+
+Shortest path(s) between two nodes, each hop explained.
+
+- **Input:** `project`, `from_node`, `to_node`, `max_paths?`
+- **Output:** `{ from, to, paths: [{ nodes, edges: [{ relation, confidence, explanation }] }] }`
+
+### `blast_radius`
+
+What depends on a node — reverse reachability, ranked by centrality.
+
+- **Input:** `project`, `node_id`, `depth?`
+- **Output:** `{ node_id, depth, impacted: [{ id, label, distance, betweenness }] }`
+- Depth default 2, max 4.
+
+## Change & contribution
+
+### `graph_diff`
+
+What changed between two graph versions (defaults to the last two).
+
+- **Input:** `project`, `from_version?`, `to_version?`
+- **Output:** `{ from_version, to_version, nodes_added, nodes_removed, edges_added, edges_removed, counts }`
+- Each list is capped (100); counts are always exact.
+
+### `add_annotation`
+
+Attach durable, contributed knowledge to a node.
+
+- **Input:** `project`, `node_id`, `content`
+- **Output:** `{ id }`
+- Written to Postgres, surfaced in `get_node` / `query_graph` with the `CONTRIBUTED` tag,
+  and **never** written into the graph file — so it survives every rebuild.
+
+## Edge confidence
+
+Every edge carries a confidence tag from Graphify, preserved through all tools:
+
+| Tag | Meaning |
+|-----|---------|
+| `EXTRACTED` | explicit in the source code |
+| `INFERRED` | resolved across files / dependency chains |
+| `AMBIGUOUS` | multiple possible targets |
+| `CONTRIBUTED` | human/agent annotation overlaid at query time (never in the graph file) |
+
+## Guarantees
+
+<Mermaid chart={`flowchart LR
+  call["any tool call"] --> auth["bearer token verified"]
+  auth --> scope["project scope enforced"]
+  scope --> cap["result size-capped"]
+  cap --> audit["audit_log written"]
+  audit --> out["bounded result"]`} />

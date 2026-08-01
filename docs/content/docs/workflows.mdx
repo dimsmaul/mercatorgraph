@@ -1,0 +1,89 @@
+---
+title: Workflows
+description: The core flows — onboarding a project, querying as an agent, rebuilds on push, and contributing knowledge.
+---
+
+# Workflows
+
+Four flows cover almost everything Mercatorgraph does day to day.
+
+## 1. Onboard a new project
+
+A maintainer registers a repository once. The worker builds its graph and promotes it.
+
+<Mermaid chart={`flowchart TB
+  a["Maintainer adds repo to projects.yaml\n+ inserts a projects row"] --> b["Trigger first build\nPOST /projects/&lt;slug&gt;/rebuild"]
+  b --> c["worker: clone → graphify update → validate"]
+  c --> d{"valid?"}
+  d -->|no| e["build marked failed\n(no promote, nothing served)"]
+  d -->|yes| f["atomic promote → current"]
+  f --> g["mcp hot-loads the new graph"]
+  g --> h["project now queryable by agents"]`} />
+
+```bash
+# register (see Getting Started for full steps)
+curl -X POST localhost:8000/projects/demo/rebuild
+curl localhost:8000/projects/demo/status     # wait for "succeeded"
+```
+
+## 2. Agent query (the everyday path)
+
+An agent asks scoped questions instead of grepping the repo. Every answer is size-capped.
+
+<Mermaid chart={`sequenceDiagram
+  participant Ag as AI Agent
+  participant M as mcp server
+  participant G as in-memory graph
+  Ag->>M: query_graph(project, "how does auth work?") + bearer token
+  M->>M: verify token · check project scope
+  M->>G: FTS seed → bounded neighborhood
+  G-->>M: subgraph + summary (capped)
+  M->>M: write audit_log
+  M-->>Ag: scoped result`} />
+
+Typical tool sequence an agent runs while exploring:
+
+1. `list_projects` — what can I see?
+2. `search` — find the entry points.
+3. `get_node` — inspect a function + its edges + any annotations.
+4. `trace_path` — how does A reach B?
+5. `blast_radius` — what breaks if I change this?
+
+## 3. Rebuild on push (keep the graph fresh)
+
+The primary trigger is a git webhook. Bursts are coalesced; cron is an alternative.
+
+<Mermaid chart={`flowchart LR
+  p["git push"] --> w["POST /webhook/&lt;slug&gt;\nHMAC verified"]
+  w --> deb{"DEBOUNCE_SECONDS &gt; 0?"}
+  deb -->|yes| q["coalesce burst → one build"]
+  deb -->|no| q2["build immediately"]
+  q --> b["build → validate → promote"]
+  q2 --> b
+  b --> n["NOTIFY_URL: build.succeeded (optional)"]`} />
+
+- **Webhook**: set `webhook_secret_ref` on the project; point the repo's webhook at `/webhook/<slug>`.
+- **Cron**: set `rebuild_interval` (seconds) to rebuild on a schedule.
+- **Manual**: `POST /projects/<slug>/rebuild` any time.
+
+## 4. Contribute knowledge (survives rebuilds)
+
+Humans and agents attach knowledge that Graphify can't infer — the "why". It lives in
+Postgres and is overlaid at query time, never written into the graph.
+
+<Mermaid chart={`flowchart TB
+  h["Developer: 'why is this a singleton?'"] --> c["comment on the node\n(status: open)"]
+  ag["Agent: add_annotation(node, 'pooled for X')"] --> db[("Postgres annotations")]
+  c --> db
+  db --> q["overlaid in get_node / query_graph\ntagged CONTRIBUTED"]
+  reb["graph rebuild"] -.->|does NOT touch| db`} />
+
+```text
+# an agent tags a node with durable context
+add_annotation(project="demo", node_id="svc_db_conn", content="singleton: connection pooled")
+
+# later, any agent sees it in get_node(...).annotations  (tag: CONTRIBUTED)
+```
+
+Because contributed knowledge is separate from the derived graph, a rebuild refreshes the code
+structure **without** losing the human/agent context layered on top.
