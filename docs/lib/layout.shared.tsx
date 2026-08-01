@@ -5,12 +5,6 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: 'Mercatorgraph Docs',
     },
-    links: [
-      {
-        text: 'GitHub',
-        url: 'https://github.com/dimsmaul/mercatorgraph',
-        external: true,
-      },
-    ],
+    githubUrl: 'https://github.com/dimsmaul/mercatorgraph',
   };
 }
