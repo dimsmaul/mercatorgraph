@@ -34,7 +34,7 @@ export default function Home() {
     <HomeLayout {...baseOptions()}>
     <main className="flex flex-col">
       {/* hero */}
-      <section className="relative overflow-hidden border-b border-fd-border">
+      <section className="mg-hero relative overflow-hidden border-b border-fd-border">
         <div className="mx-auto max-w-4xl px-6 py-24 text-center">
           <p className="mb-4 text-sm font-medium uppercase tracking-widest text-fd-primary">
             Codebase knowledge graph · MCP-native
@@ -72,9 +72,9 @@ export default function Home() {
           {features.map((f) => (
             <div
               key={f.title}
-              className="rounded-xl border border-fd-border bg-fd-card p-6"
+              className="rounded-xl border border-fd-border bg-fd-card p-6 transition-colors hover:border-fd-primary/60"
             >
-              <h3 className="mb-2 font-semibold">{f.title}</h3>
+              <h3 className="mb-2 font-semibold text-fd-primary">{f.title}</h3>
               <p className="text-sm text-fd-muted-foreground">{f.body}</p>
             </div>
           ))}

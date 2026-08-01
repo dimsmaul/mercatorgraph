@@ -3,3 +3,35 @@
 @import 'fumadocs-ui/css/preset.css';
 
 @source '../node_modules/fumadocs-ui/dist/**/*.js';
+
+/* GitHub-like blue theme ------------------------------------------------- */
+:root {
+  --color-fd-primary: hsl(212, 92%, 45%);        /* #0969da */
+  --color-fd-primary-foreground: hsl(0, 0%, 100%);
+  --color-fd-ring: hsl(212, 92%, 45%);
+  --color-fd-accent: hsl(212, 60%, 95%);
+  --color-fd-accent-foreground: hsl(212, 80%, 30%);
+}
+
+.dark {
+  --color-fd-background: hsl(215, 21%, 7%);       /* #0d1117 */
+  --color-fd-card: hsl(215, 21%, 11%);            /* #161b22 */
+  --color-fd-popover: hsl(215, 21%, 11%);
+  --color-fd-secondary: hsl(215, 19%, 14%);
+  --color-fd-muted: hsl(215, 19%, 14%);
+  --color-fd-border: hsl(213, 12%, 22%);          /* #30363d */
+  --color-fd-primary: hsl(215, 91%, 58%);         /* #2f81f7 */
+  --color-fd-ring: hsl(215, 91%, 58%);
+  --color-fd-accent: hsl(215, 30%, 18%);
+  --color-fd-accent-foreground: hsl(215, 80%, 85%);
+}
+
+/* subtle blue gradient behind the landing hero */
+.mg-hero {
+  background:
+    radial-gradient(1200px 400px at 50% -80px, hsl(212 92% 45% / 0.12), transparent 70%);
+}
+.dark .mg-hero {
+  background:
+    radial-gradient(1200px 400px at 50% -80px, hsl(215 91% 58% / 0.16), transparent 70%);
+}
