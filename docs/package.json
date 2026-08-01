@@ -3,10 +3,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "fumadocs-mdx && next dev",
+    "build": "fumadocs-mdx && next build",
     "start": "next start",
-    "generate": "fumadocs-mdx"
+    "postinstall": "fumadocs-mdx"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
