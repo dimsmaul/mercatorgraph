@@ -1,0 +1,65 @@
+---
+title: Deployment
+description: Published images, registries, and release tagging.
+---
+
+# Deployment
+
+## Images
+
+CI publishes three images per release to GHCR (and optionally Docker Hub):
+
+- `worker` — the builder
+- `mcp` — the agent query server
+- `view` — the graph viewer
+
+GHCR (always):
+
+```bash
+docker pull ghcr.io/dimsmaul/mercatorgraph/worker:0.1.1
+docker pull ghcr.io/dimsmaul/mercatorgraph/mcp:0.1.1
+docker pull ghcr.io/dimsmaul/mercatorgraph/view:0.1.1
+```
+
+Docker Hub (single repo, service in the tag — Hub has no sub-paths):
+
+```bash
+docker pull dimsmaul/mercatorgraph:worker-0.1.1
+docker pull dimsmaul/mercatorgraph:mcp-0.1.1
+docker pull dimsmaul/mercatorgraph:view-0.1.1
+```
+
+## Run from published images
+
+```bash
+IMAGE_PREFIX=ghcr.io/dimsmaul/mercatorgraph TAG=0.1.1 \
+  docker compose -f docker-compose.deploy.yml up -d
+```
+
+## Release tagging
+
+Releases are driven by the **latest commit subject** on `main`:
+
+<Mermaid chart={`flowchart TB
+  c["commit subject on main"] --> k{"keyword?"}
+  k -->|"release: major/minor/patch"| r["bump semver → vX.Y.Z + :latest"]
+  k -->|"beta: ..."| b["prerelease → vX.Y.Z-beta.N"]
+  k -->|"anything else"| n["nothing built"]
+  r --> p["build + push 3 images → git tag → GitHub release"]
+  b --> p`} />
+
+| Commit subject | Result |
+|----------------|--------|
+| `release: major` | `X.0.0` + `latest` |
+| `release: minor` | `X.Y.0` + `latest` |
+| `release: patch` | `X.Y.Z` + `latest` |
+| `beta: <note>` | `X.Y.Z-beta.N` (no `latest`) |
+| anything else | no release |
+
+Beta uses standard SemVer prerelease (`0.2.3-beta.1`): the first beta after a release targets
+the next patch, then only the trailing number increments.
+
+## This documentation site
+
+This site (the `docs/` app) is a static Fumadocs site — deploy it anywhere (Vercel, Netlify,
+static host). It is separate from the runtime stack and is **not** one of the released images.

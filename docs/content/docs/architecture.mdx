@@ -1,0 +1,51 @@
+---
+title: Architecture
+description: How the worker, MCP server, viewer, and Postgres fit together.
+---
+
+# Architecture
+
+Mercatorgraph is three app services plus Postgres. Agents only ever reach the MCP server;
+the worker is the only writer; the viewer is for humans.
+
+<Mermaid chart={`flowchart TB
+  agent["AI Agent (Claude, Cursor, CI)"] -->|MCP tool + bearer token| mcp["mcp server (read, hot path)"]
+  dev["Developer (browser)"] -->|browse| view["view (graph viewer, optional)"]
+  push["Git push / cron / manual"] -->|trigger| worker["worker (build, validate, promote)"]
+  worker -->|write versioned graph| vol[("/data volume")]
+  worker -->|build rows| pg[("postgres")]
+  mcp -->|read active graph| vol
+  mcp -->|tokens, audit, annotations| pg
+  view -->|status, graph.html| worker`} />
+
+## Two write paths
+
+Rebuilds are heavy and rare; annotations/comments are light and frequent. They never mix.
+
+<Mermaid chart={`flowchart LR
+  subgraph build["Rebuild (heavy, one writer per project)"]
+    a["clone / pull"] --> b["graphify update"] --> c["validate"] --> d["atomic promote (symlink flip)"]
+  end
+  subgraph contrib["Contributed knowledge (light, concurrent)"]
+    e["annotation / comment"] --> f["Postgres"]
+  end`} />
+
+## Query path (the hot path)
+
+<Mermaid chart={`flowchart TB
+  a["agent: MCP call + token"] --> b{"verify token (scope, expiry, revoked)"}
+  b -->|invalid| x["reject + audit"]
+  b -->|valid| c{"project in scope?"}
+  c -->|no| y["deny"]
+  c -->|yes| d["run tool on in-memory graph (size-capped)"]
+  d --> e["append audit_log"]
+  e --> f["return bounded result"]`} />
+
+## Derived vs contributed knowledge
+
+The single most important rule:
+
+- **Derived** = Graphify output (`graph.json`, report). Rebuildable, versioned on the volume,
+  overwritten every build.
+- **Contributed** = annotations + comments. Durable, in Postgres, overlaid at query time.
+  **Never** written into `graph.json` — otherwise it is lost on every rebuild.

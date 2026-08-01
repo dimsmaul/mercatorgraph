@@ -1,0 +1,11 @@
+{
+  "title": "Mercatorgraph",
+  "pages": [
+    "index",
+    "getting-started",
+    "architecture",
+    "services",
+    "configuration",
+    "deployment"
+  ]
+}

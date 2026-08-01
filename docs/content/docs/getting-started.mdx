@@ -1,0 +1,58 @@
+---
+title: Getting Started
+description: Run the stack, index a project, connect an AI agent.
+---
+
+# Getting Started
+
+## Prerequisites
+
+Docker Engine 20.10+ with the Compose v2 plugin (`docker compose version`).
+
+## 1. Run the stack
+
+Grab the compose file and env template from the [`example/`](https://github.com/dimsmaul/mercatorgraph/tree/main/example)
+folder, then:
+
+```bash
+cp .env.example .env      # set POSTGRES_PASSWORD, TAG
+docker compose up -d      # postgres + worker + mcp + view
+```
+
+Check it is up:
+
+```bash
+curl -s localhost:8000/health     # worker -> {"status":"ok"}
+```
+
+## 2. Register + build a project
+
+```bash
+docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
+  "INSERT INTO projects (slug, repo_url) VALUES ('demo','https://github.com/octocat/Hello-World.git') ON CONFLICT DO NOTHING;"
+
+curl -X POST localhost:8000/projects/demo/rebuild
+curl localhost:8000/projects/demo/status     # wait for "succeeded"
+```
+
+## 3. Mint a scoped agent token
+
+```bash
+TOKEN="my-agent-token"
+HASH=$(python3 -c "import hashlib;print(hashlib.sha256('$TOKEN'.encode()).hexdigest())")
+docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
+  "INSERT INTO tokens (token_hash, principal, scopes) VALUES ('$HASH','my-agent', ARRAY['demo']);"
+```
+
+## 4. Connect an agent
+
+```bash
+claude mcp add mercatorgraph --transport http http://localhost:8080/mcp \
+  --header "Authorization: Bearer my-agent-token"
+```
+
+Tools: `list_projects`, `query_graph`, `get_node`, `trace_path`, `blast_radius`, `search`,
+`add_annotation`, `graph_diff`.
+
+See [Configuration](/docs/configuration) for all env vars and [Deployment](/docs/deployment)
+for running from published images.

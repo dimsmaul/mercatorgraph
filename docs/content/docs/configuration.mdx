@@ -1,0 +1,85 @@
+---
+title: Configuration
+description: Environment variables, projects.yaml, volumes, ports, tokens.
+---
+
+# Configuration
+
+## Ports
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| worker | 8000 | webhook / rebuild / status / stats / graph.html |
+| mcp | 8080 | agent MCP endpoint (`/mcp`, bearer token) |
+| view | 3000 | human graph viewer |
+| postgres | 5432 | internal only |
+
+## Volumes
+
+| Volume | Mounted at | Holds |
+|--------|-----------|-------|
+| `pgdata` | postgres `/var/lib/postgresql/data` | projects, builds, tokens, audit, annotations |
+| `graphdata` | worker + mcp `/data` | versioned graph output + `current` symlink |
+
+`graphdata` **must be shared** between worker (writes) and mcp (reads). Old graph versions are
+pruned (default: keep 5). `docker compose down -v` deletes volumes.
+
+## Environment variables
+
+### Postgres
+
+| Var | Default |
+|-----|---------|
+| `POSTGRES_USER` | `knowledge` |
+| `POSTGRES_PASSWORD` | `change-me` — **set this** |
+| `POSTGRES_DB` | `knowledge` |
+
+### Images
+
+| Var | Example |
+|-----|---------|
+| `IMAGE_PREFIX` | `ghcr.io/dimsmaul/mercatorgraph` |
+| `TAG` | `0.1.1` or `latest` |
+
+### Worker
+
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `WORKER_CORS_ORIGINS` | `*` | allowed browser origins (the viewer) |
+| `DEBOUNCE_SECONDS` | `0` | coalesce webhook push bursts per project (0 = off) |
+| `NOTIFY_URL` | — | POST `build.succeeded` on promote (Slack-compatible) |
+| `VIEW_CONTENT_DIR` | — | regenerate viewer MDX on promote |
+| `ENCRYPTION_KEY` | — | Fernet key to decrypt repo deploy keys |
+
+### View
+
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `WORKER_URL` / `PUBLIC_WORKER_URL` | `http://localhost:8000` | browser-reachable worker URL |
+
+## projects.yaml
+
+```yaml
+projects:
+  - slug: demo
+    repo_url: https://github.com/octocat/Hello-World.git
+    branch: master
+    webhook_secret_ref: WEBHOOK_SECRET_DEMO   # env var with the HMAC secret
+    # rebuild_interval: 3600                   # cron: seconds between rebuilds
+    # deploy_key_ref: /run/secrets/demo.enc    # encrypted SSH key for a private repo
+```
+
+A project needs both a `projects.yaml` entry (how to build) and a `projects` table row
+(what's listed).
+
+## Build triggers
+
+- **Webhook**: `POST /webhook/{slug}` with `X-Hub-Signature-256` HMAC.
+- **Manual**: `POST /projects/{slug}/rebuild`.
+- **Cron**: set `rebuild_interval` on the project.
+
+## Tokens
+
+Stored as SHA-256 hashes. `scopes` is an array of project slugs or `['*']`. Optional
+`expires_at` and `revoked` — the MCP verifier rejects expired or revoked tokens. Every tool
+call is audited.

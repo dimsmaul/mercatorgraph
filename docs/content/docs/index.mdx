@@ -1,0 +1,32 @@
+---
+title: Introduction
+description: Turn any codebase into one centralized knowledge graph, served to AI agents and developers.
+---
+
+# Mercatorgraph
+
+**Mercatorgraph** turns any codebase into **one centralized, queryable knowledge graph** —
+served to many AI agents (via a single MCP server) and to developers (via a graph viewer).
+It wraps [Graphify](https://github.com/Graphify-Labs/graphify) as the extraction engine:
+Mercatorgraph consumes Graphify's output, it never forks it.
+
+## Why
+
+- **10 developers = 10 duplicated, out-of-sync local graphs.** Mercatorgraph builds one
+  central graph per project that every agent and developer reads.
+- **Graphs die with the session.** Here they persist on a volume, versioned.
+- **No place for human/agent knowledge.** Annotations and comments live in Postgres and
+  survive every rebuild — never written into the graph file.
+
+## What you get
+
+- A **worker** that clones a repo, builds the graph, validates it, and promotes it atomically.
+- An **MCP server** exposing fast, scoped, token-authed tools to AI agents.
+- A **graph viewer** (optional) for humans to browse the graph in the browser.
+
+## Next
+
+- [Getting Started](/docs/getting-started) — run the stack and index your first project.
+- [Architecture](/docs/architecture) — how the pieces fit together.
+- [Services](/docs/services) — worker vs mcp vs view, and why they're separate.
+- [Deployment](/docs/deployment) — images, registries, release tagging.

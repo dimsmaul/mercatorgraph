@@ -1,0 +1,48 @@
+---
+title: Services
+description: worker, mcp, view, postgres — what each does and why they're separate.
+---
+
+# Services
+
+Mercatorgraph ships three app services plus Postgres. The split is deliberate: different jobs,
+different consumers, different performance profiles.
+
+| Service | Language | Job | Consumer |
+|---------|----------|-----|----------|
+| **worker** | Python (FastAPI) | build the graph: clone/pull → graphify → validate → atomic promote | git webhooks, cron, manual |
+| **mcp** | Python (FastMCP) | serve the graph as fast, scoped, token-authed tools | AI agents |
+| **view** | Next.js | browse the graph in the browser (optional) | developers |
+| **postgres** | — | durable metadata: projects, builds, tokens, audit, annotations | worker + mcp |
+
+## worker — the builder (write path)
+
+Heavy and infrequent. Needs git + the Graphify engine. Runs **one writer per project** (a
+lock), builds to a staging dir, validates, then flips the `current` symlink atomically so
+agents never see a half-built graph. Prunes old versions.
+
+## mcp — the query server (hot path)
+
+Latency-sensitive (target p95 < 300 ms). Loads the current graph into memory (NetworkX +
+SQLite FTS), computes centrality once, serves size-capped tools. Every call is bearer-token
+authed, scope-checked, and audited. Many agents read concurrently — cheap, because it is
+read-only. Keeping it separate from the builder means a rebuild never slows queries.
+
+## view — the graph viewer (optional)
+
+A Next.js app rendering the graph as browsable pages (per node, per community, search,
+subgraph embed). Humans use it; agents never do. Skip it entirely and you still have a
+working agent platform.
+
+## Why not one image?
+
+`worker` + `mcp` are both Python and *could* share a process, but you would lose independent
+scaling and failure isolation — a heavy rebuild could slow the query path, and a build crash
+could take down agent serving. `view` is a different runtime (Node.js) entirely. Three images
+keeps each concern isolated while `docker compose up` still starts everything with one command.
+
+## Minimal vs full
+
+- **Agents only:** postgres + worker + mcp.
+- **Agents + humans:** add view.
+- The worker and mcp **must share the `/data` volume** — the one hard coupling.
